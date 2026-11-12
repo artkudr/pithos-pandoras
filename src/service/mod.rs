@@ -269,6 +269,36 @@ impl Service {
         Ok(())
     }
 
+    pub async fn update_role(
+        &self,
+        project: &str,
+        old_name: &str,
+        new_name: &str,
+        color: Option<&str>,
+    ) -> Result<(), AppError> {
+        let old_name = require_field(Some(old_name), "role")?.to_string();
+        let new_name = require_field(Some(new_name), "role")?.to_string();
+        let color = normalize_color(color);
+        let view = self.project_view(project).await?;
+        let project_id = view.project.id;
+        self.store
+            .write(move |conn| {
+                projects::update_role(conn, &project_id, &old_name, &new_name, color.as_deref())
+            })
+            .await?;
+        Ok(())
+    }
+
+    pub async fn delete_role(&self, project: &str, name: &str) -> Result<(), AppError> {
+        let name = require_field(Some(name), "role")?.to_string();
+        let view = self.project_view(project).await?;
+        let project_id = view.project.id;
+        self.store
+            .write(move |conn| projects::delete_role(conn, &project_id, &name))
+            .await?;
+        Ok(())
+    }
+
     pub async fn upsert_status(
         &self,
         project: &str,

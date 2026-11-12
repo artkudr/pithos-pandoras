@@ -53,89 +53,40 @@
                       <th>Цвет</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    <tr>
-                      <td class="act-col"></td>
-                      <td><input name="role_name" value="Коммандер" placeholder="Роль" aria-label="Название роли"></td>
-                      <td>
-                        <div class="color-field">
-                          <button type="button" class="color-button" aria-expanded="false" aria-label="Цвет роли"><span class="color-dot"></span></button>
-                          <div class="color-popover" role="dialog" aria-label="Выбор цвета" hidden>
-                            <div class="color-area" tabindex="0" role="slider" aria-label="Насыщенность и яркость"><span class="color-handle"></span></div>
-                            <input type="range" class="color-hue" min="0" max="360" aria-label="Оттенок">
-                            <div class="color-row">
-                              <span class="color-preview" aria-hidden="true"></span>
-                              <input type="text" class="color-hex" aria-label="Код цвета">
-                            </div>
-                          </div>
-                          <input type="hidden" name="role_color_1" value="#5c7cfa">
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td class="act-col"></td>
-                      <td><input name="role_name" value="Исполнитель" placeholder="Роль" aria-label="Название роли"></td>
-                      <td>
-                        <div class="color-field">
-                          <button type="button" class="color-button" aria-expanded="false" aria-label="Цвет роли"><span class="color-dot"></span></button>
-                          <div class="color-popover" role="dialog" aria-label="Выбор цвета" hidden>
-                            <div class="color-area" tabindex="0" role="slider" aria-label="Насыщенность и яркость"><span class="color-handle"></span></div>
-                            <input type="range" class="color-hue" min="0" max="360" aria-label="Оттенок">
-                            <div class="color-row">
-                              <span class="color-preview" aria-hidden="true"></span>
-                              <input type="text" class="color-hex" aria-label="Код цвета">
-                            </div>
-                          </div>
-                          <input type="hidden" name="role_color_2" value="#e8890c">
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td class="act-col"></td>
-                      <td><input name="role_name" value="Проверяющий" placeholder="Роль" aria-label="Название роли"></td>
-                      <td>
-                        <div class="color-field">
-                          <button type="button" class="color-button" aria-expanded="false" aria-label="Цвет роли"><span class="color-dot"></span></button>
-                          <div class="color-popover" role="dialog" aria-label="Выбор цвета" hidden>
-                            <div class="color-area" tabindex="0" role="slider" aria-label="Насыщенность и яркость"><span class="color-handle"></span></div>
-                            <input type="range" class="color-hue" min="0" max="360" aria-label="Оттенок">
-                            <div class="color-row">
-                              <span class="color-preview" aria-hidden="true"></span>
-                              <input type="text" class="color-hex" aria-label="Код цвета">
-                            </div>
-                          </div>
-                          <input type="hidden" name="role_color_3" value="#2f9e44">
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
+                  <tbody></tbody>
                 </table>
-                <template id="role-row-template">
-                  <tr>
+                <template id="role-edit-template">
+                  <tr class="create-row">
                     <td class="act-col"></td>
-                    <td><input name="role_name" placeholder="Роль" aria-label="Название роли"></td>
-                    <td>
-                      <div class="color-field">
-                        <button type="button" class="color-button" aria-expanded="false" aria-label="Цвет роли"><span class="color-dot"></span></button>
-                        <div class="color-popover" role="dialog" aria-label="Выбор цвета" hidden>
-                          <div class="color-area" tabindex="0" role="slider" aria-label="Насыщенность и яркость"><span class="color-handle"></span></div>
-                          <input type="range" class="color-hue" min="0" max="360" aria-label="Оттенок">
-                          <div class="color-row">
-                            <span class="color-preview" aria-hidden="true"></span>
-                            <input type="text" class="color-hex" aria-label="Код цвета">
+                    <td colspan="2">
+                      <div class="form form-inline">
+                        <input data-role-name placeholder="Роль" aria-label="Название роли" required>
+                        <div class="color-field">
+                          <button type="button" class="color-button" aria-expanded="false" aria-label="Цвет роли"><span class="color-dot"></span></button>
+                          <div class="color-popover" role="dialog" aria-label="Выбор цвета" hidden>
+                            <div class="color-area" tabindex="0" role="slider" aria-label="Насыщенность и яркость"><span class="color-handle"></span></div>
+                            <input type="range" class="color-hue" min="0" max="360" aria-label="Оттенок">
+                            <div class="color-row">
+                              <span class="color-preview" aria-hidden="true"></span>
+                              <input type="text" class="color-hex" aria-label="Код цвета">
+                            </div>
                           </div>
+                          <input type="hidden" value="#5c7cfa">
                         </div>
-                        <input type="hidden" name="role_color_new" value="#9c36b5">
+                        <div class="form-actions">
+                          <button type="button" class="form-ok" data-role-save title="Сохранить роль" aria-label="Сохранить роль"><svg class="icon"><use href="#icon-check"></use></svg></button>
+                          <button type="button" class="form-cancel" data-role-cancel title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+                          <button type="button" class="form-delete" data-role-delete title="Удалить роль" aria-label="Удалить роль"><svg class="icon"><use href="#icon-trash"></use></svg></button>
+                        </div>
                       </div>
                     </td>
                   </tr>
                 </template>
+                <input type="hidden" name="roles_json" id="roles-json" value='[{"name":"Коммандер","color":"#5c7cfa"},{"name":"Исполнитель","color":"#e8890c"},{"name":"Проверяющий","color":"#2f9e44"}]'>
                 <label>Настройки в JSON
                   <textarea class="code-input" name="config_json" rows="6">{}</textarea>
                 </label>
               </div>
-            <input type="hidden" name="roles_json" id="roles-json" value="">
-            <input type="hidden" name="roles" value="Коммандер,Исполнитель,Проверяющий">
           </form>
         </td>
       </tr>

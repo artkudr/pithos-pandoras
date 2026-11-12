@@ -156,6 +156,42 @@ pub fn add_role(
     Ok(())
 }
 
+pub fn update_role(
+    conn: &Connection,
+    project_id: &str,
+    old_name: &str,
+    new_name: &str,
+    color: Option<&str>,
+) -> Result<(), StoreError> {
+    let existing: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM project_roles WHERE project_id = ?1 AND name = ?2",
+        params![project_id, new_name],
+        |row| row.get(0),
+    )?;
+    if new_name != old_name && existing > 0 {
+        return Err(StoreError::Conflict(String::from(
+            "роль с таким именем уже есть",
+        )));
+    }
+    let changed = conn.execute(
+        "UPDATE project_roles SET name = ?3, color = ?4
+         WHERE project_id = ?1 AND name = ?2",
+        params![project_id, old_name, new_name, color],
+    )?;
+    if changed == 0 {
+        return Err(StoreError::NotFound);
+    }
+    Ok(())
+}
+
+pub fn delete_role(conn: &Connection, project_id: &str, name: &str) -> Result<(), StoreError> {
+    conn.execute(
+        "DELETE FROM project_roles WHERE project_id = ?1 AND name = ?2",
+        params![project_id, name],
+    )?;
+    Ok(())
+}
+
 pub fn upsert_status(
     conn: &Connection,
     project_id: &str,

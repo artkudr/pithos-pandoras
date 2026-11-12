@@ -41,61 +41,152 @@
     });
     row.hidden = true;
   });
-  function addRoleRow(button) {
-    var form = button.closest('form');
-    if (!form) {
+  // Таблица ролей: строки, шестерёнка, правка имени и цвета, удаление.
+  function initRolesEditor(table) {
+    var form = table.closest('form');
+    var hidden = form && form.querySelector('#roles-json');
+    var template = document.getElementById('role-edit-template');
+    var tbody = table.querySelector('tbody');
+    if (!form || !hidden || !template || !tbody) {
       return;
     }
-    var editor = form.querySelector('#roles-editor tbody');
-    var template = form.querySelector('#role-row-template');
-    if (!editor || !template) {
-      return;
-    }
-    var row = template.content.firstElementChild.cloneNode(true);
-    var index = editor.querySelectorAll('tr').length + 1;
-    var color = row.querySelector('.color-field');
-    if (color) {
-      var hidden = color.querySelector('input[type="hidden"]');
-      if (hidden) {
-        hidden.name = 'role_color_' + index;
-      }
-      initColorField(color);
-    }
-    editor.appendChild(row);
-    var field = row.querySelector('input[name="role_name"]');
-    if (field) {
-      field.focus();
-    }
-  }
 
-  function syncRoles(form) {
-    var editor = form.querySelector('#roles-editor tbody');
-    var field = form.querySelector('#roles-json');
-    if (!editor || !field) {
-      return;
-    }
     var roles = [];
-    Array.prototype.forEach.call(editor.querySelectorAll('tr'), function (row) {
-      var name = row.querySelector('input[name="role_name"]');
-      if (!name || !name.value.trim()) {
+    try {
+      roles = JSON.parse(hidden.value || '[]');
+    } catch (error) {
+      roles = [];
+    }
+    var editing = -1;
+
+    function save() {
+      hidden.value = JSON.stringify(roles);
+    }
+
+    function editorRow(index) {
+      var role = roles[index];
+      var row = template.content.firstElementChild.cloneNode(true);
+      var name = row.querySelector('[data-role-name]');
+      name.value = role.name;
+      var color = row.querySelector('.color-field');
+      var colorValue = color.querySelector('input[type="hidden"]');
+      colorValue.value = role.color || '#5c7cfa';
+      initColorField(color);
+
+      function commit() {
+        var value = name.value.trim();
+        if (!value) {
+          name.focus();
+          return;
+        }
+        roles[index] = { name: value, color: colorValue.value };
+        editing = -1;
+        render();
+      }
+
+      name.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          commit();
+        } else if (event.key === 'Escape') {
+          editing = -1;
+          render();
+        }
+      });
+      row.querySelector('[data-role-save]').addEventListener('click', commit);
+      row.querySelector('[data-role-cancel]').addEventListener('click', function () {
+        if (!role.name) {
+          roles.splice(index, 1);
+        }
+        editing = -1;
+        render();
+      });
+      row.querySelector('[data-role-delete]').addEventListener('click', function () {
+        var label = role.name || 'без названия';
+        if (!window.confirm('Удалить роль «' + label + '»?')) {
+          return;
+        }
+        roles.splice(index, 1);
+        editing = -1;
+        render();
+      });
+      return row;
+    }
+
+    function render() {
+      tbody.textContent = '';
+      roles.forEach(function (role, index) {
+        var row = document.createElement('tr');
+        var act = document.createElement('td');
+        act.className = 'act-col';
+        var gear = document.createElement('button');
+        gear.type = 'button';
+        gear.className = 'row-edit';
+        gear.dataset.roleEdit = String(index);
+        gear.title = 'Изменить роль';
+        gear.setAttribute('aria-label', 'Изменить роль ' + (role.name || 'без названия'));
+        gear.innerHTML = '<svg class="icon"><use href="#icon-gear"></use></svg>';
+        act.appendChild(gear);
+
+        var nameCell = document.createElement('td');
+        var label = document.createElement('span');
+        label.textContent = role.name || '—';
+        if (role.name && role.color) {
+          label.style.color = role.color;
+        }
+        nameCell.appendChild(label);
+
+        var colorCell = document.createElement('td');
+        var dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.style.setProperty('--dot', role.color || '#868e96');
+        dot.setAttribute('aria-hidden', 'true');
+        colorCell.appendChild(dot);
+
+        row.appendChild(act);
+        row.appendChild(nameCell);
+        row.appendChild(colorCell);
+        tbody.appendChild(row);
+        if (index === editing) {
+          tbody.appendChild(editorRow(index));
+        }
+      });
+      save();
+    }
+
+    table.querySelector('[data-add-role]').addEventListener('click', function () {
+      roles.push({ name: '', color: '#5c7cfa' });
+      editing = roles.length - 1;
+      render();
+      var input = tbody.querySelector('[data-role-name]');
+      if (input) {
+        input.focus();
+      }
+    });
+
+    table.addEventListener('click', function (event) {
+      var gear = event.target.closest('[data-role-edit]');
+      if (!gear) {
         return;
       }
-      var color = row.querySelector('input[name^="role_color"]');
-      roles.push({ name: name.value.trim(), color: color ? color.value : null });
+      editing = Number(gear.dataset.roleEdit);
+      render();
+      var input = tbody.querySelector('[data-role-name]');
+      if (input) {
+        input.focus();
+      }
     });
-    field.value = JSON.stringify(roles);
+
+    render();
   }
 
-  document.addEventListener('click', function (event) {
-    var add = event.target.closest('[data-add-role]');
-    if (add) {
-      event.preventDefault();
-      addRoleRow(add);
-    }
-  });
+  Array.prototype.forEach.call(document.querySelectorAll('#roles-editor'), initRolesEditor);
 
   document.addEventListener('submit', function (event) {
-    syncRoles(event.target);
+    var submitter = event.submitter;
+    if (submitter && submitter.dataset.confirm && !window.confirm(submitter.dataset.confirm)) {
+      event.preventDefault();
+    }
   });
 
   // Веб-пикер цвета: поле насыщенности и яркости, ползунок оттенка, код цвета.

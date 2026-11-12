@@ -454,6 +454,28 @@ h3 {
   background: var(--bg);
 }
 
+.form-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--danger);
+}
+
+.form-delete .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.form-delete:hover {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+
 .create-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;

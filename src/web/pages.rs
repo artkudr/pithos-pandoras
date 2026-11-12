@@ -63,6 +63,8 @@ pub fn router(service: Arc<Service>, project: String, live: Live) -> axum::Route
         .route("/stats", get(stats))
         .route("/settings", get(settings))
         .route("/settings/roles", post(add_role))
+        .route("/settings/roles/update", post(update_role))
+        .route("/settings/roles/delete", post(delete_role))
         .route("/settings/statuses", post(add_status))
         .route("/settings/config", post(update_config))
         .route("/settings/paths", post(update_paths))
@@ -510,7 +512,7 @@ async fn settings(
     let view = state.service.project_get(Some(project.clone())).await?;
     let saved = match query.saved.as_deref() {
         Some("paths") => Some("Пути сохранены."),
-        Some("roles") => Some("Роль добавлена."),
+        Some("roles") => Some("Список ролей обновлён."),
         Some("statuses") => Some("Статус сохранён."),
         Some("config") => Some("Настройки сохранены."),
         _ => None,
@@ -650,6 +652,27 @@ async fn add_role(
         .service
         .add_role(&project, &form.name, form.color.as_deref())
         .await?;
+    Ok(Redirect::to("/settings?saved=roles"))
+}
+
+async fn update_role(
+    State(state): State<AppState>,
+    Form(form): Form<UpdateRoleForm>,
+) -> Result<Redirect, WebError> {
+    let project = state.current_project().await;
+    state
+        .service
+        .update_role(&project, &form.old_name, &form.name, form.color.as_deref())
+        .await?;
+    Ok(Redirect::to("/settings?saved=roles"))
+}
+
+async fn delete_role(
+    State(state): State<AppState>,
+    Form(form): Form<DeleteRoleForm>,
+) -> Result<Redirect, WebError> {
+    let project = state.current_project().await;
+    state.service.delete_role(&project, &form.old_name).await?;
     Ok(Redirect::to("/settings?saved=roles"))
 }
 
@@ -982,6 +1005,18 @@ struct ProjectSelectForm {
 struct RoleForm {
     name: String,
     color: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct UpdateRoleForm {
+    old_name: String,
+    name: String,
+    color: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct DeleteRoleForm {
+    old_name: String,
 }
 
 #[derive(Deserialize)]
