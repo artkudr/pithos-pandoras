@@ -52,6 +52,10 @@
       return;
     }
     var row = template.content.firstElementChild.cloneNode(true);
+    var index = editor.querySelectorAll('tr').length + 1;
+    Array.prototype.forEach.call(row.querySelectorAll('input[type="radio"]'), function (input) {
+      input.name = 'role_color_' + index;
+    });
     editor.appendChild(row);
     var field = row.querySelector('input[name="role_name"]');
     if (field) {
@@ -71,7 +75,7 @@
       if (!name || !name.value.trim()) {
         return;
       }
-      var color = row.querySelector('input[name="role_color"]');
+      var color = row.querySelector('input[name^="role_color"]:checked');
       roles.push({ name: name.value.trim(), color: color ? color.value : null });
     });
     field.value = JSON.stringify(roles);

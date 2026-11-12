@@ -201,7 +201,7 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 
-.act-col {
+.board .act-col {
   width: 38px;
   padding-left: 6px;
   padding-right: 6px;
@@ -226,7 +226,7 @@ h3 {
 }
 
 .create-row td {
-  padding: 16px 16px 16px 54px;
+  padding: 16px;
   background: var(--panel);
 }
 
@@ -256,35 +256,62 @@ h3 {
   justify-content: center;
 }
 
-.form-inline {
+.form.form-inline {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
 
-.form-inline input,
-.form-inline select {
+.form.form-inline input,
+.form.form-inline select {
   width: auto;
   flex: 1 1 200px;
   min-width: 140px;
 }
 
-.form-inline .color-select {
+.form.form-inline .swatches,
+.form.form-inline .icon-action {
   flex: 0 0 auto;
-  min-width: 0;
 }
 
-.color-select {
-  width: auto;
+.swatches {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form .swatch {
+  position: relative;
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--swatch);
+  cursor: pointer;
+}
+
+.form .swatch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.form .swatch:has(input:checked) {
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--text);
+}
+
+.form .swatch:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .board tbody tr.create-row:hover td {
   background: var(--panel);
-}
-
-.create-row .form {
-  max-width: 760px;
 }
 
 .form-actions {
@@ -719,10 +746,6 @@ pre {
 @media (max-width: 720px) {
   .form-row {
     grid-template-columns: 1fr;
-  }
-
-  .create-row td {
-    padding-left: 16px;
   }
 
   .create-columns {

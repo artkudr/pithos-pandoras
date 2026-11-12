@@ -20,17 +20,26 @@
     </thead>
     <tbody>
       <tr class="create-row" id="create-project" hidden>
-        <td colspan="4">
+        <td class="act-col"></td>
+        <td colspan="3">
           <form class="form" method="post" action="/projects/create">
             <div class="form-row">
-              <input name="name" placeholder="Название проекта" aria-label="Название проекта" required>
-              <input name="root_path" placeholder="Корень проекта" aria-label="Корень проекта" value="." required>
+              <label>Название проекта
+                <input name="name" required>
+              </label>
+              <label>Корень проекта
+                <input name="root_path" value="." required>
+              </label>
             </div>
             <details>
               <summary>Дополнительно</summary>
               <div class="form-row">
-                <input name="tasks_dir" placeholder="Папка задач" aria-label="Папка задач" value="Задачи" required>
-                <input name="folder_pattern" placeholder="Шаблон папки" aria-label="Шаблон папки" value="{number} - {date}" required>
+                <label>Папка задач
+                  <input name="tasks_dir" value="Задачи" required>
+                </label>
+                <label>Шаблон папки
+                  <input name="folder_pattern" value="{number} - {date}" required>
+                </label>
               </div>
               <div class="create-columns">
                 <table class="board" id="roles-editor">
@@ -49,48 +58,42 @@
                       <td class="act-col"></td>
                       <td><input name="role_name" value="Коммандер" placeholder="Роль" aria-label="Название роли"></td>
                       <td>
-                        <select name="role_color" class="color-select" aria-label="Цвет роли">
-                          <option value="#5c7cfa" selected>Синий</option>
-                          <option value="#15aabf">Голубой</option>
-                          <option value="#2f9e44">Зелёный</option>
-                          <option value="#e8890c">Оранжевый</option>
-                          <option value="#e03131">Красный</option>
-                          <option value="#9c36b5">Фиолетовый</option>
-                          <option value="#e64980">Розовый</option>
-                          <option value="#868e96">Серый</option>
-                        </select>
+                        <span class="swatches">
+                          <label class="swatch" style="--swatch: #5c7cfa" title="Синий"><input type="radio" name="role_color_1" value="#5c7cfa" checked><span class="sr-only">Синий</span></label>
+                          <label class="swatch" style="--swatch: #15aabf" title="Голубой"><input type="radio" name="role_color_1" value="#15aabf"><span class="sr-only">Голубой</span></label>
+                          <label class="swatch" style="--swatch: #2f9e44" title="Зелёный"><input type="radio" name="role_color_1" value="#2f9e44"><span class="sr-only">Зелёный</span></label>
+                          <label class="swatch" style="--swatch: #e8890c" title="Оранжевый"><input type="radio" name="role_color_1" value="#e8890c"><span class="sr-only">Оранжевый</span></label>
+                          <label class="swatch" style="--swatch: #e03131" title="Красный"><input type="radio" name="role_color_1" value="#e03131"><span class="sr-only">Красный</span></label>
+                          <label class="swatch" style="--swatch: #9c36b5" title="Фиолетовый"><input type="radio" name="role_color_1" value="#9c36b5"><span class="sr-only">Фиолетовый</span></label>
+                        </span>
                       </td>
                     </tr>
                     <tr>
                       <td class="act-col"></td>
                       <td><input name="role_name" value="Исполнитель" placeholder="Роль" aria-label="Название роли"></td>
                       <td>
-                        <select name="role_color" class="color-select" aria-label="Цвет роли">
-                          <option value="#5c7cfa">Синий</option>
-                          <option value="#15aabf">Голубой</option>
-                          <option value="#2f9e44">Зелёный</option>
-                          <option value="#e8890c" selected>Оранжевый</option>
-                          <option value="#e03131">Красный</option>
-                          <option value="#9c36b5">Фиолетовый</option>
-                          <option value="#e64980">Розовый</option>
-                          <option value="#868e96">Серый</option>
-                        </select>
+                        <span class="swatches">
+                          <label class="swatch" style="--swatch: #5c7cfa" title="Синий"><input type="radio" name="role_color_2" value="#5c7cfa"><span class="sr-only">Синий</span></label>
+                          <label class="swatch" style="--swatch: #15aabf" title="Голубой"><input type="radio" name="role_color_2" value="#15aabf"><span class="sr-only">Голубой</span></label>
+                          <label class="swatch" style="--swatch: #2f9e44" title="Зелёный"><input type="radio" name="role_color_2" value="#2f9e44"><span class="sr-only">Зелёный</span></label>
+                          <label class="swatch" style="--swatch: #e8890c" title="Оранжевый"><input type="radio" name="role_color_2" value="#e8890c" checked><span class="sr-only">Оранжевый</span></label>
+                          <label class="swatch" style="--swatch: #e03131" title="Красный"><input type="radio" name="role_color_2" value="#e03131"><span class="sr-only">Красный</span></label>
+                          <label class="swatch" style="--swatch: #9c36b5" title="Фиолетовый"><input type="radio" name="role_color_2" value="#9c36b5"><span class="sr-only">Фиолетовый</span></label>
+                        </span>
                       </td>
                     </tr>
                     <tr>
                       <td class="act-col"></td>
                       <td><input name="role_name" value="Проверяющий" placeholder="Роль" aria-label="Название роли"></td>
                       <td>
-                        <select name="role_color" class="color-select" aria-label="Цвет роли">
-                          <option value="#5c7cfa">Синий</option>
-                          <option value="#15aabf">Голубой</option>
-                          <option value="#2f9e44" selected>Зелёный</option>
-                          <option value="#e8890c">Оранжевый</option>
-                          <option value="#e03131">Красный</option>
-                          <option value="#9c36b5">Фиолетовый</option>
-                          <option value="#e64980">Розовый</option>
-                          <option value="#868e96">Серый</option>
-                        </select>
+                        <span class="swatches">
+                          <label class="swatch" style="--swatch: #5c7cfa" title="Синий"><input type="radio" name="role_color_3" value="#5c7cfa"><span class="sr-only">Синий</span></label>
+                          <label class="swatch" style="--swatch: #15aabf" title="Голубой"><input type="radio" name="role_color_3" value="#15aabf"><span class="sr-only">Голубой</span></label>
+                          <label class="swatch" style="--swatch: #2f9e44" title="Зелёный"><input type="radio" name="role_color_3" value="#2f9e44" checked><span class="sr-only">Зелёный</span></label>
+                          <label class="swatch" style="--swatch: #e8890c" title="Оранжевый"><input type="radio" name="role_color_3" value="#e8890c"><span class="sr-only">Оранжевый</span></label>
+                          <label class="swatch" style="--swatch: #e03131" title="Красный"><input type="radio" name="role_color_3" value="#e03131"><span class="sr-only">Красный</span></label>
+                          <label class="swatch" style="--swatch: #9c36b5" title="Фиолетовый"><input type="radio" name="role_color_3" value="#9c36b5"><span class="sr-only">Фиолетовый</span></label>
+                        </span>
                       </td>
                     </tr>
                   </tbody>
@@ -100,16 +103,14 @@
                     <td class="act-col"></td>
                     <td><input name="role_name" placeholder="Роль" aria-label="Название роли"></td>
                     <td>
-                      <select name="role_color" class="color-select" aria-label="Цвет роли">
-                        <option value="#5c7cfa">Синий</option>
-                        <option value="#15aabf">Голубой</option>
-                        <option value="#2f9e44">Зелёный</option>
-                        <option value="#e8890c">Оранжевый</option>
-                        <option value="#e03131">Красный</option>
-                        <option value="#9c36b5">Фиолетовый</option>
-                        <option value="#e64980">Розовый</option>
-                        <option value="#868e96" selected>Серый</option>
-                      </select>
+                      <span class="swatches">
+                        <label class="swatch" style="--swatch: #5c7cfa" title="Синий"><input type="radio" name="role_color_new" value="#5c7cfa"><span class="sr-only">Синий</span></label>
+                        <label class="swatch" style="--swatch: #15aabf" title="Голубой"><input type="radio" name="role_color_new" value="#15aabf"><span class="sr-only">Голубой</span></label>
+                        <label class="swatch" style="--swatch: #2f9e44" title="Зелёный"><input type="radio" name="role_color_new" value="#2f9e44"><span class="sr-only">Зелёный</span></label>
+                        <label class="swatch" style="--swatch: #e8890c" title="Оранжевый"><input type="radio" name="role_color_new" value="#e8890c"><span class="sr-only">Оранжевый</span></label>
+                        <label class="swatch" style="--swatch: #e03131" title="Красный"><input type="radio" name="role_color_new" value="#e03131"><span class="sr-only">Красный</span></label>
+                        <label class="swatch" style="--swatch: #9c36b5" title="Фиолетовый"><input type="radio" name="role_color_new" value="#9c36b5" checked><span class="sr-only">Фиолетовый</span></label>
+                      </span>
                     </td>
                   </tr>
                 </template>

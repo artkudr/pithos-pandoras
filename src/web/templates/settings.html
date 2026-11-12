@@ -29,7 +29,6 @@
   </form>
 </section>
 
-<h2>Роли</h2>
 <div class="table-wrap">
   <table class="board">
     <thead>
@@ -43,19 +42,18 @@
     </thead>
     <tbody>
       <tr class="create-row" id="create-role" hidden>
-        <td colspan="2">
+        <td class="act-col"></td>
+        <td>
           <form class="form form-inline" method="post" action="/settings/roles">
             <input name="name" placeholder="Новая роль" aria-label="Новая роль" required>
-            <select name="color" class="color-select" aria-label="Цвет роли">
-              <option value="#5c7cfa" selected>Синий</option>
-              <option value="#15aabf">Голубой</option>
-              <option value="#2f9e44">Зелёный</option>
-              <option value="#e8890c">Оранжевый</option>
-              <option value="#e03131">Красный</option>
-              <option value="#9c36b5">Фиолетовый</option>
-              <option value="#e64980">Розовый</option>
-              <option value="#868e96">Серый</option>
-            </select>
+            <span class="swatches">
+              <label class="swatch" style="--swatch: #5c7cfa" title="Синий"><input type="radio" name="color" value="#5c7cfa" checked><span class="sr-only">Синий</span></label>
+              <label class="swatch" style="--swatch: #15aabf" title="Голубой"><input type="radio" name="color" value="#15aabf"><span class="sr-only">Голубой</span></label>
+              <label class="swatch" style="--swatch: #2f9e44" title="Зелёный"><input type="radio" name="color" value="#2f9e44"><span class="sr-only">Зелёный</span></label>
+              <label class="swatch" style="--swatch: #e8890c" title="Оранжевый"><input type="radio" name="color" value="#e8890c"><span class="sr-only">Оранжевый</span></label>
+              <label class="swatch" style="--swatch: #e03131" title="Красный"><input type="radio" name="color" value="#e03131"><span class="sr-only">Красный</span></label>
+              <label class="swatch" style="--swatch: #9c36b5" title="Фиолетовый"><input type="radio" name="color" value="#9c36b5"><span class="sr-only">Фиолетовый</span></label>
+            </span>
             <button type="submit" class="icon-action" title="Добавить роль" aria-label="Добавить роль"><svg class="icon"><use href="#icon-check"></use></svg></button>
             <button type="button" class="icon-action ghost" data-toggle="create-role" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
           </form>
@@ -76,19 +74,18 @@
             </td>
           </tr>
           <tr class="create-row" id="edit-role-{{ loop.index }}" hidden>
-            <td colspan="2">
+            <td class="act-col"></td>
+            <td>
               <form class="form form-inline" method="post" action="/settings/roles">
                 <input type="hidden" name="name" value="{{ role.name }}">
-                <select name="color" class="color-select" aria-label="Цвет роли {{ role.name }}">
-                  <option value="#5c7cfa" {% if role.color == "#5c7cfa" %}selected{% endif %}>Синий</option>
-                  <option value="#15aabf" {% if role.color == "#15aabf" %}selected{% endif %}>Голубой</option>
-                  <option value="#2f9e44" {% if role.color == "#2f9e44" %}selected{% endif %}>Зелёный</option>
-                  <option value="#e8890c" {% if role.color == "#e8890c" %}selected{% endif %}>Оранжевый</option>
-                  <option value="#e03131" {% if role.color == "#e03131" %}selected{% endif %}>Красный</option>
-                  <option value="#9c36b5" {% if role.color == "#9c36b5" %}selected{% endif %}>Фиолетовый</option>
-                  <option value="#e64980" {% if role.color == "#e64980" %}selected{% endif %}>Розовый</option>
-                  <option value="#868e96" {% if role.color == "#868e96" %}selected{% endif %}>Серый</option>
-                </select>
+                <span class="swatches">
+                  <label class="swatch" style="--swatch: #5c7cfa" title="Синий"><input type="radio" name="color-{{ loop.index }}" value="#5c7cfa" {% if role.color == "#5c7cfa" %}checked{% endif %}><span class="sr-only">Синий</span></label>
+                  <label class="swatch" style="--swatch: #15aabf" title="Голубой"><input type="radio" name="color-{{ loop.index }}" value="#15aabf" {% if role.color == "#15aabf" %}checked{% endif %}><span class="sr-only">Голубой</span></label>
+                  <label class="swatch" style="--swatch: #2f9e44" title="Зелёный"><input type="radio" name="color-{{ loop.index }}" value="#2f9e44" {% if role.color == "#2f9e44" %}checked{% endif %}><span class="sr-only">Зелёный</span></label>
+                  <label class="swatch" style="--swatch: #e8890c" title="Оранжевый"><input type="radio" name="color-{{ loop.index }}" value="#e8890c" {% if role.color == "#e8890c" %}checked{% endif %}><span class="sr-only">Оранжевый</span></label>
+                  <label class="swatch" style="--swatch: #e03131" title="Красный"><input type="radio" name="color-{{ loop.index }}" value="#e03131" {% if role.color == "#e03131" %}checked{% endif %}><span class="sr-only">Красный</span></label>
+                  <label class="swatch" style="--swatch: #9c36b5" title="Фиолетовый"><input type="radio" name="color-{{ loop.index }}" value="#9c36b5" {% if role.color == "#9c36b5" %}checked{% endif %}><span class="sr-only">Фиолетовый</span></label>
+                </span>
                 <button type="submit" class="icon-action" title="Сохранить цвет" aria-label="Сохранить цвет"><svg class="icon"><use href="#icon-check"></use></svg></button>
                 <button type="button" class="icon-action ghost" data-toggle="edit-role-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
               </form>
@@ -100,7 +97,6 @@
   </table>
 </div>
 
-<h2>Статусы</h2>
 <div class="table-wrap">
   <table class="board">
     <thead>
@@ -110,25 +106,40 @@
           <span class="sr-only">Действие</span>
         </th>
         <th>ID</th>
-        <th>Название</th>
+        <th>Статус</th>
         <th>Тип</th>
       </tr>
     </thead>
     <tbody>
       <tr class="create-row" id="create-status" hidden>
-        <td colspan="4">
-          <form class="form form-inline" method="post" action="/settings/statuses">
-            <input name="id" placeholder="ID" aria-label="ID" required>
-            <input name="title" placeholder="Название" aria-label="Название" required>
-            <select name="kind" aria-label="Тип">
-              <option value="active">в работе</option>
-              <option value="waiting">ожидание</option>
-              <option value="blocked">остановлена</option>
-              <option value="done">закрыта</option>
-            </select>
-            <input name="sort" type="number" placeholder="Сортировка" aria-label="Сортировка" value="100">
-            <button type="submit" class="icon-action" title="Добавить статус" aria-label="Добавить статус"><svg class="icon"><use href="#icon-check"></use></svg></button>
-            <button type="button" class="icon-action ghost" data-toggle="create-status" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+        <td class="act-col"></td>
+        <td colspan="3">
+          <form class="form" method="post" action="/settings/statuses">
+            <div class="form-row">
+              <label>ID
+                <input name="id" required>
+              </label>
+              <label>Название
+                <input name="title" required>
+              </label>
+            </div>
+            <div class="form-row">
+              <label>Тип
+                <select name="kind">
+                  <option value="active">в работе</option>
+                  <option value="waiting">ожидание</option>
+                  <option value="blocked">остановлена</option>
+                  <option value="done">закрыта</option>
+                </select>
+              </label>
+              <label>Сортировка
+                <input name="sort" type="number" value="100">
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="icon-action" title="Добавить статус" aria-label="Добавить статус"><svg class="icon"><use href="#icon-check"></use></svg></button>
+              <button type="button" class="icon-action ghost" data-toggle="create-status" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+            </div>
           </form>
         </td>
       </tr>
@@ -142,19 +153,30 @@
           <td>{{ status.kind_label }}</td>
         </tr>
         <tr class="create-row" id="edit-status-{{ loop.index }}" hidden>
-          <td colspan="4">
-            <form class="form form-inline" method="post" action="/settings/statuses">
+          <td class="act-col"></td>
+          <td colspan="3">
+            <form class="form" method="post" action="/settings/statuses">
               <input type="hidden" name="id" value="{{ status.id }}">
-              <input name="title" value="{{ status.title }}" placeholder="Название" aria-label="Название" required>
-              <select name="kind" aria-label="Тип">
-                <option value="active" {% if status.kind == "active" %}selected{% endif %}>в работе</option>
-                <option value="waiting" {% if status.kind == "waiting" %}selected{% endif %}>ожидание</option>
-                <option value="blocked" {% if status.kind == "blocked" %}selected{% endif %}>остановлена</option>
-                <option value="done" {% if status.kind == "done" %}selected{% endif %}>закрыта</option>
-              </select>
-              <input name="sort" type="number" value="{{ status.sort }}" placeholder="Сортировка" aria-label="Сортировка">
-              <button type="submit" class="icon-action" title="Сохранить статус" aria-label="Сохранить статус"><svg class="icon"><use href="#icon-check"></use></svg></button>
-              <button type="button" class="icon-action ghost" data-toggle="edit-status-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+              <div class="form-row">
+                <label>Название
+                  <input name="title" value="{{ status.title }}" required>
+                </label>
+                <label>Тип
+                  <select name="kind">
+                    <option value="active" {% if status.kind == "active" %}selected{% endif %}>в работе</option>
+                    <option value="waiting" {% if status.kind == "waiting" %}selected{% endif %}>ожидание</option>
+                    <option value="blocked" {% if status.kind == "blocked" %}selected{% endif %}>остановлена</option>
+                    <option value="done" {% if status.kind == "done" %}selected{% endif %}>закрыта</option>
+                  </select>
+                </label>
+              </div>
+              <label>Сортировка
+                <input name="sort" type="number" value="{{ status.sort }}">
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="icon-action" title="Сохранить статус" aria-label="Сохранить статус"><svg class="icon"><use href="#icon-check"></use></svg></button>
+                <button type="button" class="icon-action ghost" data-toggle="edit-status-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+              </div>
             </form>
           </td>
         </tr>
