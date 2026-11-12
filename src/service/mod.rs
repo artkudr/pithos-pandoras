@@ -187,6 +187,128 @@ impl Service {
         self.workspace_view(name).await
     }
 
+    pub async fn list_workspaces(&self) -> Result<Vec<Workspace>, AppError> {
+        let workspaces = self.store.read(workspaces::list_workspaces).await?;
+        Ok(workspaces)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn create_workspace(
+        &self,
+        name: &str,
+        root_path: &str,
+        tasks_dir: &str,
+        folder_pattern: &str,
+        roles: &[String],
+        config_json: &str,
+    ) -> Result<Workspace, AppError> {
+        let name = require_field(Some(name), "name")?.to_string();
+        let root_path = require_field(Some(root_path), "root_path")?.to_string();
+        let tasks_dir = require_field(Some(tasks_dir), "tasks_dir")?.to_string();
+        let folder_pattern = require_field(Some(folder_pattern), "folder_pattern")?.to_string();
+        serde_json::from_str::<serde_json::Value>(config_json)
+            .map_err(|err| AppError::field_missing("config_json").with_hint(err.to_string()))?;
+        let roles: Vec<String> = roles
+            .iter()
+            .map(|role| role.trim().to_string())
+            .filter(|role| !role.is_empty())
+            .collect();
+        let config_json = config_json.to_string();
+
+        let workspace = self
+            .store
+            .write(move |conn| {
+                workspaces::init_workspace(
+                    conn,
+                    &name,
+                    &root_path,
+                    &tasks_dir,
+                    &folder_pattern,
+                    &roles,
+                    &config_json,
+                )
+            })
+            .await?;
+        Ok(workspace)
+    }
+
+    pub async fn add_role(&self, workspace: &str, role: &str) -> Result<(), AppError> {
+        let role = require_field(Some(role), "role")?.to_string();
+        let view = self.workspace_view(workspace).await?;
+        let workspace_id = view.workspace.id;
+        self.store
+            .write(move |conn| workspaces::add_role(conn, &workspace_id, &role))
+            .await?;
+        Ok(())
+    }
+
+    pub async fn upsert_status(
+        &self,
+        workspace: &str,
+        id: &str,
+        title: &str,
+        kind: &str,
+        sort: i64,
+    ) -> Result<(), AppError> {
+        let id = require_field(Some(id), "status.id")?.to_string();
+        let title = require_field(Some(title), "status.title")?.to_string();
+        let kind = require_field(Some(kind), "status.kind")?.to_string();
+        if !matches!(kind.as_str(), "active" | "waiting" | "blocked" | "done") {
+            return Err(AppError::field_missing("status.kind").with_allowed(vec![
+                String::from("active"),
+                String::from("waiting"),
+                String::from("blocked"),
+                String::from("done"),
+            ]));
+        }
+        let view = self.workspace_view(workspace).await?;
+        let workspace_id = view.workspace.id;
+        self.store
+            .write(move |conn| {
+                workspaces::upsert_status(conn, &workspace_id, &id, &title, &kind, sort)
+            })
+            .await?;
+        Ok(())
+    }
+
+    pub async fn update_config(&self, workspace: &str, config_json: &str) -> Result<(), AppError> {
+        serde_json::from_str::<serde_json::Value>(config_json)
+            .map_err(|err| AppError::field_missing("config_json").with_hint(err.to_string()))?;
+        let view = self.workspace_view(workspace).await?;
+        let workspace_id = view.workspace.id;
+        let config_json = config_json.to_string();
+        self.store
+            .write(move |conn| workspaces::update_config(conn, &workspace_id, &config_json))
+            .await?;
+        Ok(())
+    }
+
+    pub async fn update_paths(
+        &self,
+        workspace: &str,
+        root_path: &str,
+        tasks_dir: &str,
+        folder_pattern: &str,
+    ) -> Result<(), AppError> {
+        let root_path = require_field(Some(root_path), "root_path")?.to_string();
+        let tasks_dir = require_field(Some(tasks_dir), "tasks_dir")?.to_string();
+        let folder_pattern = require_field(Some(folder_pattern), "folder_pattern")?.to_string();
+        let view = self.workspace_view(workspace).await?;
+        let workspace_id = view.workspace.id;
+        self.store
+            .write(move |conn| {
+                workspaces::update_paths(
+                    conn,
+                    &workspace_id,
+                    &root_path,
+                    &tasks_dir,
+                    &folder_pattern,
+                )
+            })
+            .await?;
+        Ok(())
+    }
+
     pub async fn task_create(&self, req: TaskCreateRequest) -> Result<TaskCreated, AppError> {
         let workspace_name = require_workspace(req.workspace.as_deref())?.to_string();
         let role = require_role(req.role.as_deref())?.to_string();

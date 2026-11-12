@@ -156,6 +156,19 @@ pub fn update_task(
     get_task_by_id(conn, task_id)
 }
 
+pub fn set_timestamps(
+    conn: &Connection,
+    task_id: &str,
+    created_at: &str,
+    updated_at: &str,
+) -> Result<(), StoreError> {
+    conn.execute(
+        "UPDATE tasks SET created_at = ?2, updated_at = ?3 WHERE id = ?1",
+        params![task_id, created_at, updated_at],
+    )?;
+    Ok(())
+}
+
 pub fn set_status(conn: &Connection, task_id: &str, status_id: &str) -> Result<Task, StoreError> {
     let now = now_rfc3339();
     conn.execute(

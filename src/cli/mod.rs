@@ -1,4 +1,6 @@
-//! CLI приложения: serve, init, doctor.
+//! CLI приложения: serve, init, doctor, import.
+
+mod import;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -26,6 +28,8 @@ pub enum Command {
     Init(InitArgs),
     /// Проверить базу, схему и открытые этапы
     Doctor(DoctorArgs),
+    /// Импортировать старые задачи из папки
+    Import(import::ImportArgs),
 }
 
 #[derive(Debug, Args)]
@@ -93,6 +97,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         Command::Serve(args) => serve(args).await,
         Command::Init(args) => init(args).await,
         Command::Doctor(args) => doctor(args).await,
+        Command::Import(args) => import_old(args).await,
     }
 }
 
@@ -155,6 +160,11 @@ fn load_or_create_key(key: Option<&str>, key_file: &Path) -> anyhow::Result<Stri
         .with_context(|| format!("записать ключ {}", key_file.display()))?;
     println!("MCP key: {key}");
     Ok(key)
+}
+
+async fn import_old(args: import::ImportArgs) -> anyhow::Result<()> {
+    let store = Arc::new(Store::open(&args.db).context("открыть базу")?);
+    import::run(&store, &args.workspace, &args.path).await
 }
 
 async fn init(args: InitArgs) -> anyhow::Result<()> {

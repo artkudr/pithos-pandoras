@@ -4,15 +4,25 @@
 
 {% block content %}
 <h1>Настройки</h1>
+<p class="muted">Пространство: {{ name }}</p>
+<p><a href="/workspaces">Все пространства</a></p>
 
 <section class="card">
-  <h2>Пространство</h2>
-  <dl class="meta">
-    <dt>Имя</dt><dd>{{ name }}</dd>
-    <dt>Корень</dt><dd>{{ root_path }}</dd>
-    <dt>Папка задач</dt><dd>{{ tasks_dir }}</dd>
-    <dt>Шаблон папки</dt><dd>{{ folder_pattern }}</dd>
-  </dl>
+  <h2>Пути пространства</h2>
+  <form class="form" method="post" action="/settings/paths">
+    <label>Корень проекта
+      <input name="root_path" value="{{ root_path }}" required>
+    </label>
+    <div class="form-row">
+      <label>Папка задач
+        <input name="tasks_dir" value="{{ tasks_dir }}" required>
+      </label>
+      <label>Шаблон папки
+        <input name="folder_pattern" value="{{ folder_pattern }}" required>
+      </label>
+    </div>
+    <button type="submit">Сохранить пути</button>
+  </form>
 </section>
 
 <section class="card">
@@ -26,6 +36,12 @@
       {% endfor %}
     </ul>
   {% endif %}
+  <form class="form" method="post" action="/settings/roles">
+    <label>Новая роль
+      <input name="name" required>
+    </label>
+    <button type="submit">Добавить роль</button>
+  </form>
 </section>
 
 <section class="card">
@@ -44,10 +60,39 @@
       {% endfor %}
     </tbody>
   </table>
+  <form class="form" method="post" action="/settings/statuses">
+    <div class="form-row">
+      <label>ID
+        <input name="id" required>
+      </label>
+      <label>Название
+        <input name="title" required>
+      </label>
+    </div>
+    <div class="form-row">
+      <label>Тип
+        <select name="kind">
+          <option value="active">active</option>
+          <option value="waiting">waiting</option>
+          <option value="blocked">blocked</option>
+          <option value="done">done</option>
+        </select>
+      </label>
+      <label>Сортировка
+        <input name="sort" type="number" value="100">
+      </label>
+    </div>
+    <button type="submit">Добавить или обновить статус</button>
+  </form>
 </section>
 
 <section class="card">
   <h2>config_json</h2>
-  <pre>{{ config_json }}</pre>
+  <form class="form" method="post" action="/settings/config">
+    <label>Правила входов и настройки
+      <textarea name="config_json" rows="12">{{ config_json }}</textarea>
+    </label>
+    <button type="submit">Сохранить config_json</button>
+  </form>
 </section>
 {% endblock %}

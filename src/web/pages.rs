@@ -19,7 +19,13 @@ use crate::service::{
 #[derive(Clone)]
 struct AppState {
     service: Arc<Service>,
-    workspace: String,
+    workspace: Arc<tokio::sync::RwLock<String>>,
+}
+
+impl AppState {
+    async fn current_workspace(&self) -> String {
+        self.workspace.read().await.clone()
+    }
 }
 
 #[derive(RustEmbed)]
@@ -27,9 +33,15 @@ struct AppState {
 struct Assets;
 
 pub fn router(service: Arc<Service>, workspace: String) -> axum::Router {
-    let state = AppState { service, workspace };
+    let state = AppState {
+        service,
+        workspace: Arc::new(tokio::sync::RwLock::new(workspace)),
+    };
     axum::Router::new()
         .route("/", get(board))
+        .route("/workspaces", get(workspaces_page))
+        .route("/workspaces/create", post(create_workspace))
+        .route("/workspaces/select", post(select_workspace))
         .route("/tasks", post(create_task))
         .route("/tasks/{number}", get(task_page))
         .route("/tasks/{number}/note", post(add_note))
@@ -47,13 +59,17 @@ pub fn router(service: Arc<Service>, workspace: String) -> axum::Router {
         .route("/search", get(search))
         .route("/stats", get(stats))
         .route("/settings", get(settings))
+        .route("/settings/roles", post(add_role))
+        .route("/settings/statuses", post(add_status))
+        .route("/settings/config", post(update_config))
+        .route("/settings/paths", post(update_paths))
         .route("/files/{file_id}", get(file))
         .route("/static/{*path}", get(static_file))
         .with_state(state)
 }
 
 async fn board(State(state): State<AppState>) -> Result<Html<String>, WebError> {
-    let workspace = state.workspace.clone();
+    let workspace = state.current_workspace().await;
     let tasks = state.service.task_list(Some(workspace.clone())).await?;
     let stats = state.service.task_stats(Some(workspace.clone())).await?;
 
@@ -77,12 +93,13 @@ async fn create_task(
     State(state): State<AppState>,
     Form(form): Form<CreateTaskForm>,
 ) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
     let route = normalize(form.route);
     let resource = normalize(form.resource);
     let created = state
         .service
         .human_task_create(
-            &state.workspace,
+            &workspace,
             &form.title,
             &form.statement,
             route.as_deref(),
@@ -96,14 +113,12 @@ async fn task_page(
     State(state): State<AppState>,
     Path(number): Path<i64>,
 ) -> Result<Html<String>, WebError> {
+    let workspace = state.current_workspace().await;
     let data = state
         .service
-        .task_page(Some(state.workspace.clone()), Some(number.to_string()))
+        .task_page(Some(workspace.clone()), Some(number.to_string()))
         .await?;
-    let view = state
-        .service
-        .workspace_get(Some(state.workspace.clone()))
-        .await?;
+    let view = state.service.workspace_get(Some(workspace.clone())).await?;
     let statuses = view
         .statuses
         .into_iter()
@@ -126,7 +141,7 @@ async fn task_page(
         .any(|warning| warning == "folder_missing");
 
     let template = TaskTemplate {
-        workspace: state.workspace.clone(),
+        workspace: workspace.clone(),
         task: TaskView {
             number: data.task.number,
             title: data.task.title,
@@ -196,10 +211,11 @@ async fn add_note(
     Path(number): Path<i64>,
     Form(form): Form<NoteForm>,
 ) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
     state
         .service
         .task_note(TaskNoteRequest {
-            workspace: Some(state.workspace.clone()),
+            workspace: Some(workspace.clone()),
             task: Some(number.to_string()),
             role: Some(String::from(HUMAN_ACTOR)),
             text: Some(form.text),
@@ -213,10 +229,11 @@ async fn set_status(
     Path(number): Path<i64>,
     Form(form): Form<StatusForm>,
 ) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
     state
         .service
         .task_set_status(TaskSetStatusRequest {
-            workspace: Some(state.workspace.clone()),
+            workspace: Some(workspace.clone()),
             task: Some(number.to_string()),
             role: Some(String::from(HUMAN_ACTOR)),
             status: Some(form.status),
@@ -229,10 +246,11 @@ async fn close_task(
     State(state): State<AppState>,
     Path(number): Path<i64>,
 ) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
     state
         .service
         .task_close(TaskCloseRequest {
-            workspace: Some(state.workspace.clone()),
+            workspace: Some(workspace.clone()),
             task: Some(number.to_string()),
             role: Some(String::from(HUMAN_ACTOR)),
         })
@@ -244,9 +262,10 @@ async fn create_folder(
     State(state): State<AppState>,
     Path(number): Path<i64>,
 ) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
     state
         .service
-        .ensure_task_folder(&state.workspace, &number.to_string())
+        .ensure_task_folder(&workspace, &number.to_string())
         .await?;
     Ok(Redirect::to(&format!("/tasks/{number}")))
 }
@@ -256,6 +275,7 @@ async fn upload_file(
     Path(number): Path<i64>,
     mut multipart: Multipart,
 ) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
     let mut title = String::new();
     let mut kind = String::from("file");
     let mut file_name = String::from("file.bin");
@@ -303,7 +323,7 @@ async fn upload_file(
     };
     let folder = state
         .service
-        .ensure_task_folder(&state.workspace, &number.to_string())
+        .ensure_task_folder(&workspace, &number.to_string())
         .await?;
     let file_name = sanitize_file_name(&file_name);
     let mut path = FsPath::new(&folder).join(&file_name);
@@ -323,7 +343,7 @@ async fn upload_file(
     state
         .service
         .file_add(FileAddRequest {
-            workspace: Some(state.workspace.clone()),
+            workspace: Some(workspace.clone()),
             task: Some(number.to_string()),
             role: Some(String::from(HUMAN_ACTOR)),
             path: Some(path.to_string_lossy().to_string()),
@@ -340,10 +360,11 @@ async fn block_task(
     Path(number): Path<i64>,
     Form(form): Form<BlockForm>,
 ) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
     state
         .service
         .task_block(TaskBlockRequest {
-            workspace: Some(state.workspace.clone()),
+            workspace: Some(workspace.clone()),
             task: Some(number.to_string()),
             role: Some(String::from(HUMAN_ACTOR)),
             reason: Some(form.reason),
@@ -359,10 +380,11 @@ async fn resume_task(
     Path(number): Path<i64>,
     Form(form): Form<ReasonForm>,
 ) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
     state
         .service
         .task_resume(TaskResumeRequest {
-            workspace: Some(state.workspace.clone()),
+            workspace: Some(workspace.clone()),
             task: Some(number.to_string()),
             role: Some(String::from(HUMAN_ACTOR)),
             reason: Some(form.reason),
@@ -376,10 +398,11 @@ async fn reopen_task(
     Path(number): Path<i64>,
     Form(form): Form<ReasonForm>,
 ) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
     state
         .service
         .task_reopen(TaskReopenRequest {
-            workspace: Some(state.workspace.clone()),
+            workspace: Some(workspace.clone()),
             task: Some(number.to_string()),
             role: Some(String::from(HUMAN_ACTOR)),
             reason: Some(form.reason),
@@ -393,10 +416,11 @@ async fn update_task(
     Path(number): Path<i64>,
     Form(form): Form<UpdateForm>,
 ) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
     state
         .service
         .task_update(TaskUpdateRequest {
-            workspace: Some(state.workspace.clone()),
+            workspace: Some(workspace.clone()),
             task: Some(number.to_string()),
             role: Some(String::from(HUMAN_ACTOR)),
             title: normalize(form.title),
@@ -410,18 +434,19 @@ async fn search(
     State(state): State<AppState>,
     Query(query): Query<SearchQuery>,
 ) -> Result<Html<String>, WebError> {
+    let workspace = state.current_workspace().await;
     let q = query.q.unwrap_or_default().trim().to_string();
     let tasks = if q.is_empty() {
         Vec::new()
     } else {
         state
             .service
-            .task_search(Some(state.workspace.clone()), Some(q.clone()))
+            .task_search(Some(workspace.clone()), Some(q.clone()))
             .await?
     };
 
     let template = SearchTemplate {
-        workspace: state.workspace.clone(),
+        workspace: workspace.clone(),
         query: q,
         tasks: tasks.into_iter().map(board_task_view).collect(),
     };
@@ -430,13 +455,11 @@ async fn search(
 }
 
 async fn stats(State(state): State<AppState>) -> Result<Html<String>, WebError> {
-    let stats = state
-        .service
-        .task_stats(Some(state.workspace.clone()))
-        .await?;
+    let workspace = state.current_workspace().await;
+    let stats = state.service.task_stats(Some(workspace.clone())).await?;
 
     let template = StatsTemplate {
-        workspace: state.workspace.clone(),
+        workspace: workspace.clone(),
         by_status: stats
             .by_status
             .into_iter()
@@ -463,13 +486,11 @@ async fn stats(State(state): State<AppState>) -> Result<Html<String>, WebError> 
 }
 
 async fn settings(State(state): State<AppState>) -> Result<Html<String>, WebError> {
-    let view = state
-        .service
-        .workspace_get(Some(state.workspace.clone()))
-        .await?;
+    let workspace = state.current_workspace().await;
+    let view = state.service.workspace_get(Some(workspace.clone())).await?;
 
     let template = SettingsTemplate {
-        workspace: state.workspace.clone(),
+        workspace: workspace.clone(),
         name: view.workspace.name,
         root_path: view.workspace.root_path,
         tasks_dir: view.workspace.tasks_dir,
@@ -490,13 +511,123 @@ async fn settings(State(state): State<AppState>) -> Result<Html<String>, WebErro
     render(template)
 }
 
+async fn workspaces_page(State(state): State<AppState>) -> Result<Html<String>, WebError> {
+    let current = state.current_workspace().await;
+    let workspaces = state.service.list_workspaces().await?;
+    let template = WorkspacesTemplate {
+        workspace: current.clone(),
+        current,
+        workspaces: workspaces
+            .into_iter()
+            .map(|workspace| WorkspaceItemView {
+                name: workspace.name,
+                root_path: workspace.root_path,
+                tasks_dir: workspace.tasks_dir,
+            })
+            .collect(),
+    };
+    render(template)
+}
+
+async fn create_workspace(
+    State(state): State<AppState>,
+    Form(form): Form<WorkspaceCreateForm>,
+) -> Result<Redirect, WebError> {
+    let roles: Vec<String> = form
+        .roles
+        .split(',')
+        .map(str::trim)
+        .filter(|role| !role.is_empty())
+        .map(str::to_string)
+        .collect();
+    let created = state
+        .service
+        .create_workspace(
+            &form.name,
+            &form.root_path,
+            &form.tasks_dir,
+            &form.folder_pattern,
+            &roles,
+            &form.config_json,
+        )
+        .await?;
+    *state.workspace.write().await = created.name.clone();
+    Ok(Redirect::to("/"))
+}
+
+async fn select_workspace(
+    State(state): State<AppState>,
+    Form(form): Form<WorkspaceSelectForm>,
+) -> Result<Redirect, WebError> {
+    let view = state.service.workspace_get(Some(form.name)).await?;
+    *state.workspace.write().await = view.workspace.name;
+    Ok(Redirect::to("/"))
+}
+
+async fn add_role(
+    State(state): State<AppState>,
+    Form(form): Form<RoleForm>,
+) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
+    state.service.add_role(&workspace, &form.name).await?;
+    Ok(Redirect::to("/settings"))
+}
+
+async fn add_status(
+    State(state): State<AppState>,
+    Form(form): Form<StatusCreateForm>,
+) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
+    state
+        .service
+        .upsert_status(
+            &workspace,
+            &form.id,
+            &form.title,
+            &form.kind,
+            form.sort.unwrap_or(100),
+        )
+        .await?;
+    Ok(Redirect::to("/settings"))
+}
+
+async fn update_config(
+    State(state): State<AppState>,
+    Form(form): Form<ConfigForm>,
+) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
+    state
+        .service
+        .update_config(&workspace, &form.config_json)
+        .await?;
+    Ok(Redirect::to("/settings"))
+}
+
+async fn update_paths(
+    State(state): State<AppState>,
+    Form(form): Form<PathsForm>,
+) -> Result<Redirect, WebError> {
+    let workspace = state.current_workspace().await;
+    state
+        .service
+        .update_paths(
+            &workspace,
+            &form.root_path,
+            &form.tasks_dir,
+            &form.folder_pattern,
+        )
+        .await?;
+    Ok(Redirect::to("/settings"))
+}
+
 async fn file(
     State(state): State<AppState>,
     Path(file_id): Path<String>,
 ) -> Result<Response, WebError> {
+    let workspace = state.current_workspace().await;
     let file = state
         .service
-        .file_for_workspace(&state.workspace, &file_id)
+        .file_for_workspace(&workspace, &file_id)
         .await?;
     let bytes = tokio::fs::read(&file.path)
         .await
@@ -664,6 +795,46 @@ struct SearchQuery {
     q: Option<String>,
 }
 
+#[derive(Deserialize)]
+struct WorkspaceCreateForm {
+    name: String,
+    root_path: String,
+    tasks_dir: String,
+    folder_pattern: String,
+    roles: String,
+    config_json: String,
+}
+
+#[derive(Deserialize)]
+struct WorkspaceSelectForm {
+    name: String,
+}
+
+#[derive(Deserialize)]
+struct RoleForm {
+    name: String,
+}
+
+#[derive(Deserialize)]
+struct StatusCreateForm {
+    id: String,
+    title: String,
+    kind: String,
+    sort: Option<i64>,
+}
+
+#[derive(Deserialize)]
+struct ConfigForm {
+    config_json: String,
+}
+
+#[derive(Deserialize)]
+struct PathsForm {
+    root_path: String,
+    tasks_dir: String,
+    folder_pattern: String,
+}
+
 #[derive(Template)]
 #[template(path = "board.html")]
 struct BoardTemplate {
@@ -717,6 +888,20 @@ struct SettingsTemplate {
     config_json: String,
     roles: Vec<String>,
     statuses: Vec<SettingsStatusView>,
+}
+
+#[derive(Template)]
+#[template(path = "workspaces.html")]
+struct WorkspacesTemplate {
+    workspace: String,
+    current: String,
+    workspaces: Vec<WorkspaceItemView>,
+}
+
+struct WorkspaceItemView {
+    name: String,
+    root_path: String,
+    tasks_dir: String,
 }
 
 #[derive(Template)]

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Пространства — {{ workspace }}{% endblock %}
+
+{% block content %}
+<h1>Пространства</h1>
+
+<table class="board">
+  <thead>
+    <tr>
+      <th>Имя</th>
+      <th>Корень</th>
+      <th>Папка задач</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in workspaces %}
+      <tr>
+        <td>
+          {{ item.name }}
+          {% if item.name == current %}
+            <span class="kind">выбрано</span>
+          {% endif %}
+        </td>
+        <td>{{ item.root_path }}</td>
+        <td>{{ item.tasks_dir }}</td>
+        <td>
+          <form class="inline-form" method="post" action="/workspaces/select">
+            <input type="hidden" name="name" value="{{ item.name }}">
+            <button type="submit">Выбрать</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<section class="card">
+  <h2>Новое пространство</h2>
+  <form class="form" method="post" action="/workspaces/create">
+    <label>Имя
+      <input name="name" required>
+    </label>
+    <label>Корень проекта
+      <input name="root_path" value="." required>
+    </label>
+    <div class="form-row">
+      <label>Папка задач
+        <input name="tasks_dir" value="Задачи" required>
+      </label>
+      <label>Шаблон папки
+        <input name="folder_pattern" value="{number} - {date}" required>
+      </label>
+    </div>
+    <label>Роли через запятую
+      <input name="roles" value="Коммандер,Исполнитель,Проверяющий">
+    </label>
+    <label>config_json
+      <textarea name="config_json" rows="6">{}</textarea>
+    </label>
+    <button type="submit">Создать и выбрать</button>
+  </form>
+</section>
+{% endblock %}

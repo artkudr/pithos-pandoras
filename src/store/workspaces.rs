@@ -90,6 +90,82 @@ pub fn workspace_view(conn: &Connection, name: &str) -> Result<WorkspaceView, St
     })
 }
 
+pub fn list_workspaces(conn: &Connection) -> Result<Vec<Workspace>, StoreError> {
+    let sql =
+        format!("SELECT {WORKSPACE_COLUMNS} FROM workspaces WHERE archived = 0 ORDER BY name");
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map([], map_workspace)?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row?);
+    }
+    Ok(out)
+}
+
+pub fn add_role(conn: &Connection, workspace_id: &str, name: &str) -> Result<(), StoreError> {
+    let sort: i64 = conn.query_row(
+        "SELECT COALESCE(MAX(sort), 0) + 10 FROM workspace_roles WHERE workspace_id = ?1",
+        [workspace_id],
+        |row| row.get(0),
+    )?;
+    conn.execute(
+        "INSERT OR IGNORE INTO workspace_roles
+         (workspace_id, name, color, sort)
+         VALUES (?1, ?2, NULL, ?3)",
+        params![workspace_id, name, sort],
+    )?;
+    Ok(())
+}
+
+pub fn upsert_status(
+    conn: &Connection,
+    workspace_id: &str,
+    id: &str,
+    title: &str,
+    kind: &str,
+    sort: i64,
+) -> Result<(), StoreError> {
+    conn.execute(
+        "INSERT INTO workspace_statuses
+         (workspace_id, id, title, kind, color, sort)
+         VALUES (?1, ?2, ?3, ?4, NULL, ?5)
+         ON CONFLICT(workspace_id, id) DO UPDATE SET
+             title = excluded.title,
+             kind = excluded.kind,
+             sort = excluded.sort",
+        params![workspace_id, id, title, kind, sort],
+    )?;
+    Ok(())
+}
+
+pub fn update_config(
+    conn: &Connection,
+    workspace_id: &str,
+    config_json: &str,
+) -> Result<(), StoreError> {
+    conn.execute(
+        "UPDATE workspaces SET config_json = ?2 WHERE id = ?1",
+        params![workspace_id, config_json],
+    )?;
+    Ok(())
+}
+
+pub fn update_paths(
+    conn: &Connection,
+    workspace_id: &str,
+    root_path: &str,
+    tasks_dir: &str,
+    folder_pattern: &str,
+) -> Result<(), StoreError> {
+    conn.execute(
+        "UPDATE workspaces
+         SET root_path = ?2, tasks_dir = ?3, folder_pattern = ?4
+         WHERE id = ?1",
+        params![workspace_id, root_path, tasks_dir, folder_pattern],
+    )?;
+    Ok(())
+}
+
 pub fn init_workspace(
     conn: &mut Connection,
     name: &str,
