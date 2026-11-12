@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 description = "Локальный сервис задач PithosPandoras"
+default-run = "pithos-pandoras"
 
 # Зависимости из архитектуры. Версии зафиксированы в Cargo.lock.
 [dependencies]

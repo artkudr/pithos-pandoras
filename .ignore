@@ -7,3 +7,4 @@ home-dev-kit/
 *.db-wal
 *.db-shm
 *.log
+backups/

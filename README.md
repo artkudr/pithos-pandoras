@@ -23,6 +23,7 @@ tools/setup-dev.ps1
 cargo run -- init --workspace PithosPandoras --root . --db pithos-pandoras.db
 cargo run -- serve --db pithos-pandoras.db
 cargo run -- doctor --db pithos-pandoras.db
+cargo run -- backup --db pithos-pandoras.db
 
 tools/check.ps1          # форматирование, clippy, тесты, cargo deny
 ```
@@ -32,7 +33,8 @@ tools/check.ps1          # форматирование, clippy, тесты, car
 Клиент MCP передаёт `Authorization: Bearer <ключ>`.
 
 Реализованы M1–M4: доска, карточка, действия человека, поиск, статистика,
-пространства, роли, статусы, входы и импорт. Остались `/events` и упаковка.
+пространства, роли, статусы, входы и импорт. Плюс Windows-трей и копия базы
+(`backup`). Остались события `/events` и упаковка.
 
 Зависимости уже добавлены. Если понадобится повторить набор на чистом каркасе —
 `tools/add-deps.ps1`.

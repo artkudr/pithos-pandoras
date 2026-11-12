@@ -1,5 +1,6 @@
-//! CLI приложения: serve, init, doctor, import.
+//! CLI приложения: serve, init, doctor, import, backup.
 
+pub mod backup;
 mod import;
 
 use std::path::{Path, PathBuf};
@@ -30,6 +31,8 @@ pub enum Command {
     Doctor(DoctorArgs),
     /// Импортировать старые задачи из папки
     Import(import::ImportArgs),
+    /// Сделать копию базы
+    Backup(backup::BackupArgs),
 }
 
 #[derive(Debug, Args)]
@@ -98,6 +101,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         Command::Init(args) => init(args).await,
         Command::Doctor(args) => doctor(args).await,
         Command::Import(args) => import_old(args).await,
+        Command::Backup(args) => backup::run(args).await,
     }
 }
 

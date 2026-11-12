@@ -593,3 +593,28 @@ async fn set_status_done_with_open_stage_is_conflict() {
         .unwrap_err();
     assert_eq!(error.code, ErrorCode::Conflict);
 }
+
+#[tokio::test]
+async fn backup_makes_readable_copy() {
+    let (service, dir) = setup("{}").await;
+    create_task(&service, "Копия").await;
+
+    let store = Store::open(dir.path().join("test.db")).unwrap();
+    let out = dir.path().join("backups");
+    let path = pithos_pandoras::cli::backup::backup_to(&store, &out)
+        .await
+        .unwrap();
+
+    assert!(path.exists());
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let tasks: i64 = conn
+        .query_row("SELECT COUNT(*) FROM tasks", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(tasks, 1);
+    let integrity: String = conn
+        .query_row("PRAGMA integrity_check", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(integrity, "ok");
+}
