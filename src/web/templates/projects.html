@@ -58,42 +58,54 @@
                       <td class="act-col"></td>
                       <td><input name="role_name" value="Коммандер" placeholder="Роль" aria-label="Название роли"></td>
                       <td>
-                        <span class="swatches">
-                          <label class="swatch" style="--swatch: #5c7cfa" title="Синий"><input type="radio" name="role_color_1" value="#5c7cfa" checked><span class="sr-only">Синий</span></label>
-                          <label class="swatch" style="--swatch: #15aabf" title="Голубой"><input type="radio" name="role_color_1" value="#15aabf"><span class="sr-only">Голубой</span></label>
-                          <label class="swatch" style="--swatch: #2f9e44" title="Зелёный"><input type="radio" name="role_color_1" value="#2f9e44"><span class="sr-only">Зелёный</span></label>
-                          <label class="swatch" style="--swatch: #e8890c" title="Оранжевый"><input type="radio" name="role_color_1" value="#e8890c"><span class="sr-only">Оранжевый</span></label>
-                          <label class="swatch" style="--swatch: #e03131" title="Красный"><input type="radio" name="role_color_1" value="#e03131"><span class="sr-only">Красный</span></label>
-                          <label class="swatch" style="--swatch: #9c36b5" title="Фиолетовый"><input type="radio" name="role_color_1" value="#9c36b5"><span class="sr-only">Фиолетовый</span></label>
-                        </span>
+                        <div class="color-field">
+                          <button type="button" class="color-button" aria-expanded="false" aria-label="Цвет роли"><span class="color-dot"></span></button>
+                          <div class="color-popover" role="dialog" aria-label="Выбор цвета" hidden>
+                            <div class="color-area" tabindex="0" role="slider" aria-label="Насыщенность и яркость"><span class="color-handle"></span></div>
+                            <input type="range" class="color-hue" min="0" max="360" aria-label="Оттенок">
+                            <div class="color-row">
+                              <span class="color-preview" aria-hidden="true"></span>
+                              <input type="text" class="color-hex" aria-label="Код цвета">
+                            </div>
+                          </div>
+                          <input type="hidden" name="role_color_1" value="#5c7cfa">
+                        </div>
                       </td>
                     </tr>
                     <tr>
                       <td class="act-col"></td>
                       <td><input name="role_name" value="Исполнитель" placeholder="Роль" aria-label="Название роли"></td>
                       <td>
-                        <span class="swatches">
-                          <label class="swatch" style="--swatch: #5c7cfa" title="Синий"><input type="radio" name="role_color_2" value="#5c7cfa"><span class="sr-only">Синий</span></label>
-                          <label class="swatch" style="--swatch: #15aabf" title="Голубой"><input type="radio" name="role_color_2" value="#15aabf"><span class="sr-only">Голубой</span></label>
-                          <label class="swatch" style="--swatch: #2f9e44" title="Зелёный"><input type="radio" name="role_color_2" value="#2f9e44"><span class="sr-only">Зелёный</span></label>
-                          <label class="swatch" style="--swatch: #e8890c" title="Оранжевый"><input type="radio" name="role_color_2" value="#e8890c" checked><span class="sr-only">Оранжевый</span></label>
-                          <label class="swatch" style="--swatch: #e03131" title="Красный"><input type="radio" name="role_color_2" value="#e03131"><span class="sr-only">Красный</span></label>
-                          <label class="swatch" style="--swatch: #9c36b5" title="Фиолетовый"><input type="radio" name="role_color_2" value="#9c36b5"><span class="sr-only">Фиолетовый</span></label>
-                        </span>
+                        <div class="color-field">
+                          <button type="button" class="color-button" aria-expanded="false" aria-label="Цвет роли"><span class="color-dot"></span></button>
+                          <div class="color-popover" role="dialog" aria-label="Выбор цвета" hidden>
+                            <div class="color-area" tabindex="0" role="slider" aria-label="Насыщенность и яркость"><span class="color-handle"></span></div>
+                            <input type="range" class="color-hue" min="0" max="360" aria-label="Оттенок">
+                            <div class="color-row">
+                              <span class="color-preview" aria-hidden="true"></span>
+                              <input type="text" class="color-hex" aria-label="Код цвета">
+                            </div>
+                          </div>
+                          <input type="hidden" name="role_color_2" value="#e8890c">
+                        </div>
                       </td>
                     </tr>
                     <tr>
                       <td class="act-col"></td>
                       <td><input name="role_name" value="Проверяющий" placeholder="Роль" aria-label="Название роли"></td>
                       <td>
-                        <span class="swatches">
-                          <label class="swatch" style="--swatch: #5c7cfa" title="Синий"><input type="radio" name="role_color_3" value="#5c7cfa"><span class="sr-only">Синий</span></label>
-                          <label class="swatch" style="--swatch: #15aabf" title="Голубой"><input type="radio" name="role_color_3" value="#15aabf"><span class="sr-only">Голубой</span></label>
-                          <label class="swatch" style="--swatch: #2f9e44" title="Зелёный"><input type="radio" name="role_color_3" value="#2f9e44" checked><span class="sr-only">Зелёный</span></label>
-                          <label class="swatch" style="--swatch: #e8890c" title="Оранжевый"><input type="radio" name="role_color_3" value="#e8890c"><span class="sr-only">Оранжевый</span></label>
-                          <label class="swatch" style="--swatch: #e03131" title="Красный"><input type="radio" name="role_color_3" value="#e03131"><span class="sr-only">Красный</span></label>
-                          <label class="swatch" style="--swatch: #9c36b5" title="Фиолетовый"><input type="radio" name="role_color_3" value="#9c36b5"><span class="sr-only">Фиолетовый</span></label>
-                        </span>
+                        <div class="color-field">
+                          <button type="button" class="color-button" aria-expanded="false" aria-label="Цвет роли"><span class="color-dot"></span></button>
+                          <div class="color-popover" role="dialog" aria-label="Выбор цвета" hidden>
+                            <div class="color-area" tabindex="0" role="slider" aria-label="Насыщенность и яркость"><span class="color-handle"></span></div>
+                            <input type="range" class="color-hue" min="0" max="360" aria-label="Оттенок">
+                            <div class="color-row">
+                              <span class="color-preview" aria-hidden="true"></span>
+                              <input type="text" class="color-hex" aria-label="Код цвета">
+                            </div>
+                          </div>
+                          <input type="hidden" name="role_color_3" value="#2f9e44">
+                        </div>
                       </td>
                     </tr>
                   </tbody>
@@ -103,14 +115,18 @@
                     <td class="act-col"></td>
                     <td><input name="role_name" placeholder="Роль" aria-label="Название роли"></td>
                     <td>
-                      <span class="swatches">
-                        <label class="swatch" style="--swatch: #5c7cfa" title="Синий"><input type="radio" name="role_color_new" value="#5c7cfa"><span class="sr-only">Синий</span></label>
-                        <label class="swatch" style="--swatch: #15aabf" title="Голубой"><input type="radio" name="role_color_new" value="#15aabf"><span class="sr-only">Голубой</span></label>
-                        <label class="swatch" style="--swatch: #2f9e44" title="Зелёный"><input type="radio" name="role_color_new" value="#2f9e44"><span class="sr-only">Зелёный</span></label>
-                        <label class="swatch" style="--swatch: #e8890c" title="Оранжевый"><input type="radio" name="role_color_new" value="#e8890c"><span class="sr-only">Оранжевый</span></label>
-                        <label class="swatch" style="--swatch: #e03131" title="Красный"><input type="radio" name="role_color_new" value="#e03131"><span class="sr-only">Красный</span></label>
-                        <label class="swatch" style="--swatch: #9c36b5" title="Фиолетовый"><input type="radio" name="role_color_new" value="#9c36b5" checked><span class="sr-only">Фиолетовый</span></label>
-                      </span>
+                      <div class="color-field">
+                        <button type="button" class="color-button" aria-expanded="false" aria-label="Цвет роли"><span class="color-dot"></span></button>
+                        <div class="color-popover" role="dialog" aria-label="Выбор цвета" hidden>
+                          <div class="color-area" tabindex="0" role="slider" aria-label="Насыщенность и яркость"><span class="color-handle"></span></div>
+                          <input type="range" class="color-hue" min="0" max="360" aria-label="Оттенок">
+                          <div class="color-row">
+                            <span class="color-preview" aria-hidden="true"></span>
+                            <input type="text" class="color-hex" aria-label="Код цвета">
+                          </div>
+                        </div>
+                        <input type="hidden" name="role_color_new" value="#9c36b5">
+                      </div>
                     </td>
                   </tr>
                 </template>

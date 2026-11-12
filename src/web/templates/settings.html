@@ -47,14 +47,18 @@
         <td>
           <form class="form form-inline" method="post" action="/settings/roles">
             <input name="name" placeholder="Новая роль" aria-label="Новая роль" required>
-            <span class="swatches">
-              <label class="swatch" style="--swatch: #5c7cfa" title="Синий"><input type="radio" name="color" value="#5c7cfa" checked><span class="sr-only">Синий</span></label>
-              <label class="swatch" style="--swatch: #15aabf" title="Голубой"><input type="radio" name="color" value="#15aabf"><span class="sr-only">Голубой</span></label>
-              <label class="swatch" style="--swatch: #2f9e44" title="Зелёный"><input type="radio" name="color" value="#2f9e44"><span class="sr-only">Зелёный</span></label>
-              <label class="swatch" style="--swatch: #e8890c" title="Оранжевый"><input type="radio" name="color" value="#e8890c"><span class="sr-only">Оранжевый</span></label>
-              <label class="swatch" style="--swatch: #e03131" title="Красный"><input type="radio" name="color" value="#e03131"><span class="sr-only">Красный</span></label>
-              <label class="swatch" style="--swatch: #9c36b5" title="Фиолетовый"><input type="radio" name="color" value="#9c36b5"><span class="sr-only">Фиолетовый</span></label>
-            </span>
+            <div class="color-field">
+              <button type="button" class="color-button" aria-expanded="false" aria-label="Цвет роли"><span class="color-dot"></span></button>
+              <div class="color-popover" role="dialog" aria-label="Выбор цвета" hidden>
+                <div class="color-area" tabindex="0" role="slider" aria-label="Насыщенность и яркость"><span class="color-handle"></span></div>
+                <input type="range" class="color-hue" min="0" max="360" aria-label="Оттенок">
+                <div class="color-row">
+                  <span class="color-preview" aria-hidden="true"></span>
+                  <input type="text" class="color-hex" aria-label="Код цвета">
+                </div>
+              </div>
+              <input type="hidden" name="color" value="#5c7cfa">
+            </div>
             <button type="submit" class="icon-action" title="Добавить роль" aria-label="Добавить роль"><svg class="icon"><use href="#icon-check"></use></svg></button>
             <button type="button" class="icon-action ghost" data-toggle="create-role" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
           </form>
@@ -79,14 +83,18 @@
             <td>
               <form class="form form-inline" method="post" action="/settings/roles">
                 <input type="hidden" name="name" value="{{ role.name }}">
-                <span class="swatches">
-                  <label class="swatch" style="--swatch: #5c7cfa" title="Синий"><input type="radio" name="color-{{ loop.index }}" value="#5c7cfa" {% if role.color == "#5c7cfa" %}checked{% endif %}><span class="sr-only">Синий</span></label>
-                  <label class="swatch" style="--swatch: #15aabf" title="Голубой"><input type="radio" name="color-{{ loop.index }}" value="#15aabf" {% if role.color == "#15aabf" %}checked{% endif %}><span class="sr-only">Голубой</span></label>
-                  <label class="swatch" style="--swatch: #2f9e44" title="Зелёный"><input type="radio" name="color-{{ loop.index }}" value="#2f9e44" {% if role.color == "#2f9e44" %}checked{% endif %}><span class="sr-only">Зелёный</span></label>
-                  <label class="swatch" style="--swatch: #e8890c" title="Оранжевый"><input type="radio" name="color-{{ loop.index }}" value="#e8890c" {% if role.color == "#e8890c" %}checked{% endif %}><span class="sr-only">Оранжевый</span></label>
-                  <label class="swatch" style="--swatch: #e03131" title="Красный"><input type="radio" name="color-{{ loop.index }}" value="#e03131" {% if role.color == "#e03131" %}checked{% endif %}><span class="sr-only">Красный</span></label>
-                  <label class="swatch" style="--swatch: #9c36b5" title="Фиолетовый"><input type="radio" name="color-{{ loop.index }}" value="#9c36b5" {% if role.color == "#9c36b5" %}checked{% endif %}><span class="sr-only">Фиолетовый</span></label>
-                </span>
+                <div class="color-field">
+                  <button type="button" class="color-button" aria-expanded="false" aria-label="Цвет роли {{ role.name }}"><span class="color-dot"></span></button>
+                  <div class="color-popover" role="dialog" aria-label="Выбор цвета" hidden>
+                    <div class="color-area" tabindex="0" role="slider" aria-label="Насыщенность и яркость"><span class="color-handle"></span></div>
+                    <input type="range" class="color-hue" min="0" max="360" aria-label="Оттенок">
+                    <div class="color-row">
+                      <span class="color-preview" aria-hidden="true"></span>
+                      <input type="text" class="color-hex" aria-label="Код цвета">
+                    </div>
+                  </div>
+                  <input type="hidden" name="color" value="{% if role.color.is_empty() %}#5c7cfa{% else %}{{ role.color }}{% endif %}">
+                </div>
                 <button type="submit" class="icon-action" title="Сохранить цвет" aria-label="Сохранить цвет"><svg class="icon"><use href="#icon-check"></use></svg></button>
                 <button type="button" class="icon-action ghost" data-toggle="edit-role-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
               </form>
