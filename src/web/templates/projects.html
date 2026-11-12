@@ -50,7 +50,6 @@
                         <span class="sr-only">Действие</span>
                       </th>
                       <th>Роль</th>
-                      <th>Цвет</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
@@ -58,7 +57,7 @@
                 <template id="role-edit-template">
                   <tr class="create-row">
                     <td class="act-col"></td>
-                    <td colspan="2">
+                    <td>
                       <div class="form form-inline">
                         <input data-role-name placeholder="Роль" aria-label="Название роли" required>
                         <div class="color-field">
@@ -117,7 +116,7 @@
               <span class="muted">задач нет</span>
             {% else %}
               {% for status in item.statuses %}
-                <span class="status-chip"><span class="dot" style="--dot: {{ status.color }}" aria-hidden="true"></span>{{ status.title }} <strong class="num">{{ status.count }}</strong></span>
+                <span class="status-chip" style="color: {{ status.color }}">{{ status.title }} <strong>{{ status.count }}</strong></span>
               {% endfor %}
             {% endif %}
           </td>

@@ -51,7 +51,7 @@
             <td class="act-col"></td>
             <td class="num">{{ task.number }}</td>
             <td><a href="/tasks/{{ task.number }}">{{ task.title }}</a></td>
-            <td><span class="status-chip"><span class="dot" style="--dot: {{ task.status_color }}" aria-hidden="true"></span>{{ task.status }}</span></td>
+            <td><span class="status-chip" style="color: {{ task.status_color }}">{{ task.status }}</span></td>
             <td>{% if !task.current_role_color.is_empty() %}<span style="color: {{ task.current_role_color }}">{{ task.current_role }}</span>{% else %}{{ task.current_role }}{% endif %}</td>
             <td>{{ task.waiting_for }}</td>
             <td class="muted nowrap">{{ task.updated_at }}</td>

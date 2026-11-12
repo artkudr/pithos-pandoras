@@ -136,16 +136,8 @@
         }
         nameCell.appendChild(label);
 
-        var colorCell = document.createElement('td');
-        var dot = document.createElement('span');
-        dot.className = 'dot';
-        dot.style.setProperty('--dot', role.color || '#868e96');
-        dot.setAttribute('aria-hidden', 'true');
-        colorCell.appendChild(dot);
-
         row.appendChild(act);
         row.appendChild(nameCell);
-        row.appendChild(colorCell);
         tbody.appendChild(row);
         if (index === editing) {
           tbody.appendChild(editorRow(index));

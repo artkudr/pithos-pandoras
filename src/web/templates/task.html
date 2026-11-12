@@ -5,7 +5,7 @@
 {% block content %}
 <header class="task-head">
   <h1><span class="num">{{ task.number }}</span> {{ task.title }}</h1>
-  <span class="status"><span class="dot" style="--dot: {{ task.status_color }}" aria-hidden="true"></span>{{ task.status }}</span>
+  <span class="status" style="color: {{ task.status_color }}">{{ task.status }}</span>
 </header>
 
 {% if !warnings.is_empty() %}

@@ -689,6 +689,7 @@ async fn add_status(
             &form.title,
             &form.kind,
             form.sort.unwrap_or(100),
+            form.color.as_deref(),
         )
         .await?;
     Ok(Redirect::to("/settings?saved=statuses"))
@@ -1025,6 +1026,7 @@ struct StatusCreateForm {
     title: String,
     kind: String,
     sort: Option<i64>,
+    color: Option<String>,
 }
 
 #[derive(Deserialize)]

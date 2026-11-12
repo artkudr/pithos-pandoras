@@ -306,6 +306,7 @@ impl Service {
         title: &str,
         kind: &str,
         sort: i64,
+        color: Option<&str>,
     ) -> Result<(), AppError> {
         let id = require_field(Some(id), "status.id")?.to_string();
         let title = require_field(Some(title), "status.title")?.to_string();
@@ -318,10 +319,21 @@ impl Service {
                 String::from("done"),
             ]));
         }
+        let color = normalize_color(color);
         let view = self.project_view(project).await?;
         let project_id = view.project.id;
         self.store
-            .write(move |conn| projects::upsert_status(conn, &project_id, &id, &title, &kind, sort))
+            .write(move |conn| {
+                projects::upsert_status(
+                    conn,
+                    &project_id,
+                    &id,
+                    &title,
+                    &kind,
+                    color.as_deref(),
+                    sort,
+                )
+            })
             .await?;
         Ok(())
     }

@@ -198,17 +198,19 @@ pub fn upsert_status(
     id: &str,
     title: &str,
     kind: &str,
+    color: Option<&str>,
     sort: i64,
 ) -> Result<(), StoreError> {
     conn.execute(
         "INSERT INTO project_statuses
          (project_id, id, title, kind, color, sort)
-         VALUES (?1, ?2, ?3, ?4, NULL, ?5)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
          ON CONFLICT(project_id, id) DO UPDATE SET
              title = excluded.title,
              kind = excluded.kind,
+             color = COALESCE(excluded.color, project_statuses.color),
              sort = excluded.sort",
-        params![project_id, id, title, kind, sort],
+        params![project_id, id, title, kind, color, sort],
     )?;
     Ok(())
 }
