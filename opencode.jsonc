@@ -1,0 +1,8 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // Always-on правила проекта. Скиллы OpenCode находит сам в .opencode/skills.
+  "instructions": [
+    ".opencode/rules/*.md"
+  ]
+}

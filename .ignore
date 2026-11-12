@@ -1,0 +1,8 @@
+# ripgrep: не искать в сборке, кэше и справочном архиве.
+target/
+graphify-out/
+.git/
+home-dev-kit/
+*.db
+*.db-wal
+*.db-shm
