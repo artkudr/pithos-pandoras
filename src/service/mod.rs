@@ -755,9 +755,13 @@ impl Service {
                         &tx, &stage_id, &now, end_reason, end_reason, seconds, &reason,
                     )?;
                 }
-                let status = tasks::status_by_kind(&tx, &workspace_id, end_reason)?;
-                let task =
-                    tasks::set_waiting(&tx, &task_id, &status.id, &waiting_for, &waiting_ref)?;
+                let task = if waiting_for.is_empty() {
+                    let status = tasks::status_by_kind(&tx, &workspace_id, "blocked")?;
+                    tasks::set_blocked(&tx, &task_id, &status.id)?
+                } else {
+                    let status = tasks::status_by_kind(&tx, &workspace_id, "waiting")?;
+                    tasks::set_waiting(&tx, &task_id, &status.id, &waiting_for, &waiting_ref)?
+                };
                 let kind = if waiting_for.is_empty() {
                     "task_blocked"
                 } else {
@@ -971,10 +975,24 @@ impl Service {
             .write(move |conn| {
                 let tx = conn.transaction()?;
                 let status_row = tasks::status_by_id(&tx, &workspace_id, &status)?;
-                if status_row.kind == "done" && stages::open_stage(&tx, &task_id)?.is_some() {
-                    return Err(StoreError::Conflict(
-                        "нельзя закрыть задачу с открытым этапом".to_string(),
-                    ));
+                if status_row.kind == "done" {
+                    if stages::open_stage(&tx, &task_id)?.is_some() {
+                        return Err(StoreError::Conflict(
+                            "нельзя закрыть задачу с открытым этапом".to_string(),
+                        ));
+                    }
+                    let task = tasks::close_task(&tx, &workspace_id, &task_id)?;
+                    events::insert_event(
+                        &tx,
+                        &task_id,
+                        "task_closed",
+                        None,
+                        Some(&role),
+                        "{}",
+                        "agent",
+                    )?;
+                    tx.commit()?;
+                    return Ok(task);
                 }
                 let task = tasks::set_status(&tx, &task_id, &status)?;
                 let payload = serde_json::json!({"status": &status}).to_string();

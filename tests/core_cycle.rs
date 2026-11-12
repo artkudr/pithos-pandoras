@@ -417,6 +417,46 @@ async fn file_add_stays_inside_project_root() {
 }
 
 #[tokio::test]
+async fn set_status_done_without_open_stage_closes_task() {
+    let (service, _dir) = setup("{}").await;
+    let task = create_task(&service, "Закрыть статусом").await;
+    let task_ref = task.task.number.to_string();
+
+    let closed = service
+        .task_set_status(TaskSetStatusRequest {
+            workspace: Some(String::from("PithosPandoras")),
+            task: Some(task_ref),
+            role: Some(String::from("Коммандер")),
+            status: Some(String::from("done")),
+        })
+        .await
+        .unwrap();
+    assert_eq!(closed.status_id, "done");
+    assert!(closed.closed_at.is_some());
+}
+
+#[tokio::test]
+async fn block_without_waiting_does_not_set_waiting_since() {
+    let (service, _dir) = setup("{}").await;
+    let task = create_task(&service, "Блок без ожидания").await;
+    let task_ref = task.task.number.to_string();
+
+    let blocked = service
+        .task_block(TaskBlockRequest {
+            workspace: Some(String::from("PithosPandoras")),
+            task: Some(task_ref),
+            role: Some(String::from("Коммандер")),
+            reason: Some(String::from("стоп")),
+            waiting_for: None,
+            waiting_ref: None,
+        })
+        .await
+        .unwrap();
+    assert_eq!(blocked.status_id, "blocked");
+    assert!(blocked.waiting_since.is_none());
+}
+
+#[tokio::test]
 async fn search_finds_title_and_report_text() {
     let (service, _dir) = setup("{}").await;
     let task = create_task(&service, "Уникальное имя").await;

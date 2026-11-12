@@ -174,7 +174,8 @@ pub fn close_task(
     let now = now_rfc3339();
     conn.execute(
         "UPDATE tasks
-         SET status_id = ?2, closed_at = ?3, updated_at = ?3
+         SET status_id = ?2, closed_at = ?3, updated_at = ?3,
+             waiting_for = '', waiting_ref = '', waiting_since = NULL
          WHERE id = ?1",
         params![task_id, done.id, now],
     )?;
@@ -195,6 +196,18 @@ pub fn set_waiting(
              waiting_since = ?5, updated_at = ?5
          WHERE id = ?1",
         params![task_id, status_id, waiting_for, waiting_ref, now],
+    )?;
+    get_task_by_id(conn, task_id)
+}
+
+pub fn set_blocked(conn: &Connection, task_id: &str, status_id: &str) -> Result<Task, StoreError> {
+    let now = now_rfc3339();
+    conn.execute(
+        "UPDATE tasks
+         SET status_id = ?2, waiting_for = '', waiting_ref = '',
+             waiting_since = NULL, updated_at = ?3
+         WHERE id = ?1",
+        params![task_id, status_id, now],
     )?;
     get_task_by_id(conn, task_id)
 }
@@ -224,7 +237,9 @@ pub fn reopen_task(
     let now = now_rfc3339();
     conn.execute(
         "UPDATE tasks
-         SET status_id = ?2, closed_at = NULL, updated_at = ?3
+         SET status_id = ?2, closed_at = NULL,
+             waiting_for = '', waiting_ref = '', waiting_since = NULL,
+             updated_at = ?3
          WHERE id = ?1",
         params![task_id, active.id, now],
     )?;
