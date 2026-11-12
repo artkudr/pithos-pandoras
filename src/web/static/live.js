@@ -11,6 +11,11 @@
   var reloading = false;
 
   function hasDraft() {
+    // Открытая форма внутри <details> — человек работает с ней, перезагрузка
+    // закроет блок и собьёт с места.
+    if (document.querySelector('details[open] form')) {
+      return true;
+    }
     var fields = document.querySelectorAll('input, textarea, select');
     for (var i = 0; i < fields.length; i += 1) {
       var field = fields[i];
