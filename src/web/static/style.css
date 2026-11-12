@@ -72,23 +72,26 @@ a:hover {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 700;
-  color: var(--text);
+  border-radius: 6px;
 }
 
 .brand-mark {
   display: block;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
 }
 
 .project {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
   color: var(--muted);
   font-size: 14px;
+}
+
+.project:hover {
+  color: var(--text);
+}
+
+.project[aria-current="page"] {
+  color: var(--text);
 }
 
 .page {
@@ -442,28 +445,14 @@ h3 {
   justify-content: flex-end;
 }
 
-.icon-button {
+.icon-static {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  border: 1px solid transparent;
-  border-radius: 8px;
   color: var(--muted);
-}
-
-.icon-button:hover {
-  color: var(--text);
-  background: var(--bg);
-  border-color: var(--line);
-  text-decoration: none;
-}
-
-.icon-button[aria-current="page"] {
-  color: var(--accent);
-  background: var(--accent-soft);
-  border-color: var(--accent);
+  cursor: default;
 }
 
 .form {
