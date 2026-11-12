@@ -690,7 +690,10 @@ async fn static_file(Path(path): Path<String>) -> Response {
         Some(content) => {
             let mime = mime_guess::from_path(&path).first_or_octet_stream();
             (
-                [(header::CONTENT_TYPE, mime.to_string())],
+                [
+                    (header::CONTENT_TYPE, mime.to_string()),
+                    (header::CACHE_CONTROL, String::from("no-cache")),
+                ],
                 content.data.into_owned(),
             )
                 .into_response()
