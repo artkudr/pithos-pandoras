@@ -14,8 +14,8 @@
           <span class="sr-only">Действие</span>
         </th>
         <th>Проект</th>
-        <th>Корень</th>
         <th>Статусы</th>
+        <th>Корень</th>
       </tr>
     </thead>
     <tbody>
@@ -114,7 +114,6 @@
               {% endif %}
             </div>
           </td>
-          <td class="path">{{ item.root_path }}</td>
           <td>
             {% if item.statuses.is_empty() %}
               <span class="muted">задач нет</span>
@@ -124,6 +123,7 @@
               {% endfor %}
             {% endif %}
           </td>
+          <td class="path">{{ item.root_path }}</td>
         </tr>
       {% endfor %}
     </tbody>
