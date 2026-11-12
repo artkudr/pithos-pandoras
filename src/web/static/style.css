@@ -202,15 +202,15 @@ h3 {
 }
 
 .board .act-col {
-  width: 38px;
-  padding-left: 6px;
-  padding-right: 6px;
+  width: 1%;
+  padding: 6px 2px 6px 6px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .add-button {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
   border-radius: 6px;
@@ -435,8 +435,8 @@ h3 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
   border-radius: 6px;
