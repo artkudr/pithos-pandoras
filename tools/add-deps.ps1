@@ -27,6 +27,10 @@ try {
     cargo add time --features serde,formatting,parsing,macros
     cargo add clap --features derive
     cargo add rust-embed
+    cargo add tray-icon --no-default-features
+    cargo add winit@0.30 --no-default-features
+    cargo add open
+    cargo add tracing-appender
     cargo add thiserror
     cargo add anyhow
     cargo add --dev tempfile

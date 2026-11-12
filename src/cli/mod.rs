@@ -137,7 +137,7 @@ async fn serve(args: ServeArgs) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn load_or_create_key(key: Option<&str>, key_file: &Path) -> anyhow::Result<String> {
+pub(crate) fn load_or_create_key(key: Option<&str>, key_file: &Path) -> anyhow::Result<String> {
     if let Some(key) = key {
         let key = key.trim();
         if key.is_empty() {

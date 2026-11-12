@@ -83,6 +83,15 @@ cargo run -- import --workspace <имя> --path <папка> --db <база>
 
 В базе и MCP — RFC3339 UTC. На странице — местное время с поясом.
 
+## Трей
+
+```text
+cargo build --release --bin pithos-pandoras-tray
+.\target\release\pithos-pandoras-tray.exe
+```
+
+Консоли нет; лог — `pithos-pandoras.log`. Автозапуск: `tools/install-tray.ps1`.
+
 ## Память
 
 - Сюда — только невыводимые, стабильные, влияющие на поведение факты.

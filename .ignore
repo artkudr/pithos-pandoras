@@ -6,3 +6,4 @@ home-dev-kit/
 *.db
 *.db-wal
 *.db-shm
+*.log

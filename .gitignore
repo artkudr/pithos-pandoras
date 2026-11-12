@@ -9,6 +9,9 @@
 *.db-wal
 *.db-shm
 
+# Логи
+*.log
+
 # Секреты
 .env
 .env.*
