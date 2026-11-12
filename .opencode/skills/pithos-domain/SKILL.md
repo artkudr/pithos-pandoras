@@ -51,7 +51,9 @@ description: >-
 - `latest` — последний завершённый круг источника; нет отчёта — `input_missing`.
 - `same` — тот же круг, который открывается.
 - `previous` — предыдущий круг той же роли.
-- `return` — отчёт, который вернул задачу.
+- `return` — отчёт, который вернул задачу. Возврат фиксируется при verdict
+  `return`, `returned`, `возврат` или `на доработку`; событие `stage_returned`
+  хранит `report_id`.
 - Отката на более старый круг нет.
 - `stage_start` отдаёт `role`, `round`, `kind`, `report_id`, `title`, `preview`.
   Полный текст — `report_get`.
