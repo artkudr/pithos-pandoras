@@ -226,8 +226,57 @@ h3 {
 }
 
 .create-row td {
-  padding: 16px;
+  padding: 16px 16px 16px 54px;
   background: var(--panel);
+}
+
+.icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-action {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-inline input,
+.form-inline select {
+  width: auto;
+  flex: 1 1 200px;
+  min-width: 140px;
+}
+
+.form-inline .color-select {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.color-select {
+  width: auto;
 }
 
 .board tbody tr.create-row:hover td {
@@ -670,6 +719,10 @@ pre {
 @media (max-width: 720px) {
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .create-row td {
+    padding-left: 16px;
   }
 
   .create-columns {

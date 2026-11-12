@@ -25,23 +25,15 @@
       <tr class="create-row" id="create-task" hidden>
         <td colspan="7">
           <form class="form" method="post" action="/tasks">
-            <label>Название
-              <input name="title" required>
-            </label>
-            <label>Постановка
-              <textarea name="statement" rows="3" required></textarea>
-            </label>
+            <input name="title" placeholder="Название" aria-label="Название" required>
+            <textarea name="statement" rows="3" placeholder="Постановка" aria-label="Постановка" required></textarea>
             <div class="form-row">
-              <label>Маршрут
-                <input name="route" placeholder="например, полный">
-              </label>
-              <label>Ресурс
-                <input name="resource" placeholder="например, backend">
-              </label>
+              <input name="route" placeholder="Маршрут: например, полный" aria-label="Маршрут">
+              <input name="resource" placeholder="Ресурс: например, backend" aria-label="Ресурс">
             </div>
             <div class="form-actions">
-              <button type="submit">Создать задачу</button>
-              <button type="button" class="ghost" data-toggle="create-task">Отменить</button>
+              <button type="submit" class="icon-action" title="Создать задачу" aria-label="Создать задачу"><svg class="icon"><use href="#icon-check"></use></svg></button>
+              <button type="button" class="icon-action ghost" data-toggle="create-task" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
             </div>
           </form>
         </td>

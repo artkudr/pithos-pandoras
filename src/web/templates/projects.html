@@ -10,7 +10,7 @@
     <thead>
       <tr>
         <th class="act-col">
-          <button type="button" class="add-button" data-toggle="create-project" aria-expanded="false" aria-controls="create-project" title="Новый проект" aria-label="Новый проект">+</button>
+          <button type="button" class="add-button" data-toggle="create-project" aria-expanded="false" aria-controls="create-project" title="Новый проект" aria-label="Новый проект"><svg class="icon"><use href="#icon-plus"></use></svg></button>
           <span class="sr-only">Действие</span>
         </th>
         <th>Проект</th>
@@ -22,72 +22,107 @@
       <tr class="create-row" id="create-project" hidden>
         <td colspan="4">
           <form class="form" method="post" action="/projects/create">
-            <label>Название
-              <input name="name" required>
-            </label>
-            <label>Корень проекта
-              <input name="root_path" value="." required>
-            </label>
+            <div class="form-row">
+              <input name="name" placeholder="Название проекта" aria-label="Название проекта" required>
+              <input name="root_path" placeholder="Корень проекта" aria-label="Корень проекта" value="." required>
+            </div>
             <details>
               <summary>Дополнительно</summary>
               <div class="form-row">
-                <label>Папка задач
-                  <input name="tasks_dir" value="Задачи" required>
-                </label>
-                <label>Шаблон папки
-                  <input name="folder_pattern" value="{number} - {date}" required>
-                </label>
+                <input name="tasks_dir" placeholder="Папка задач" aria-label="Папка задач" value="Задачи" required>
+                <input name="folder_pattern" placeholder="Шаблон папки" aria-label="Шаблон папки" value="{number} - {date}" required>
               </div>
               <div class="create-columns">
-                <div>
-                  <p class="field-label">Роли</p>
-                  <table class="board" id="roles-editor">
-                    <thead>
-                      <tr>
-                        <th class="act-col">
-                          <button type="button" class="add-button" data-add-role title="Добавить роль" aria-label="Добавить роль">+</button>
-                          <span class="sr-only">Действие</span>
-                        </th>
-                        <th>Роль</th>
-                        <th>Цвет</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td class="act-col"></td>
-                        <td><input name="role_name" value="Коммандер" aria-label="Название роли"></td>
-                        <td><input type="color" name="role_color" value="#5c7cfa" aria-label="Цвет роли"></td>
-                      </tr>
-                      <tr>
-                        <td class="act-col"></td>
-                        <td><input name="role_name" value="Исполнитель" aria-label="Название роли"></td>
-                        <td><input type="color" name="role_color" value="#e8890c" aria-label="Цвет роли"></td>
-                      </tr>
-                      <tr>
-                        <td class="act-col"></td>
-                        <td><input name="role_name" value="Проверяющий" aria-label="Название роли"></td>
-                        <td><input type="color" name="role_color" value="#2f9e44" aria-label="Цвет роли"></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <template id="role-row-template">
+                <table class="board" id="roles-editor">
+                  <thead>
+                    <tr>
+                      <th class="act-col">
+                        <button type="button" class="add-button" data-add-role title="Добавить роль" aria-label="Добавить роль"><svg class="icon"><use href="#icon-plus"></use></svg></button>
+                        <span class="sr-only">Действие</span>
+                      </th>
+                      <th>Роль</th>
+                      <th>Цвет</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     <tr>
                       <td class="act-col"></td>
-                      <td><input name="role_name" placeholder="например, Оракул" aria-label="Название роли"></td>
-                      <td><input type="color" name="role_color" value="#868e96" aria-label="Цвет роли"></td>
+                      <td><input name="role_name" value="Коммандер" placeholder="Роль" aria-label="Название роли"></td>
+                      <td>
+                        <select name="role_color" class="color-select" aria-label="Цвет роли">
+                          <option value="#5c7cfa" selected>Синий</option>
+                          <option value="#15aabf">Голубой</option>
+                          <option value="#2f9e44">Зелёный</option>
+                          <option value="#e8890c">Оранжевый</option>
+                          <option value="#e03131">Красный</option>
+                          <option value="#9c36b5">Фиолетовый</option>
+                          <option value="#e64980">Розовый</option>
+                          <option value="#868e96">Серый</option>
+                        </select>
+                      </td>
                     </tr>
-                  </template>
-                  <input type="hidden" name="roles_json" id="roles-json" value="">
-                  <input type="hidden" name="roles" value="Коммандер,Исполнитель,Проверяющий">
-                </div>
+                    <tr>
+                      <td class="act-col"></td>
+                      <td><input name="role_name" value="Исполнитель" placeholder="Роль" aria-label="Название роли"></td>
+                      <td>
+                        <select name="role_color" class="color-select" aria-label="Цвет роли">
+                          <option value="#5c7cfa">Синий</option>
+                          <option value="#15aabf">Голубой</option>
+                          <option value="#2f9e44">Зелёный</option>
+                          <option value="#e8890c" selected>Оранжевый</option>
+                          <option value="#e03131">Красный</option>
+                          <option value="#9c36b5">Фиолетовый</option>
+                          <option value="#e64980">Розовый</option>
+                          <option value="#868e96">Серый</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="act-col"></td>
+                      <td><input name="role_name" value="Проверяющий" placeholder="Роль" aria-label="Название роли"></td>
+                      <td>
+                        <select name="role_color" class="color-select" aria-label="Цвет роли">
+                          <option value="#5c7cfa">Синий</option>
+                          <option value="#15aabf">Голубой</option>
+                          <option value="#2f9e44" selected>Зелёный</option>
+                          <option value="#e8890c">Оранжевый</option>
+                          <option value="#e03131">Красный</option>
+                          <option value="#9c36b5">Фиолетовый</option>
+                          <option value="#e64980">Розовый</option>
+                          <option value="#868e96">Серый</option>
+                        </select>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <template id="role-row-template">
+                  <tr>
+                    <td class="act-col"></td>
+                    <td><input name="role_name" placeholder="Роль" aria-label="Название роли"></td>
+                    <td>
+                      <select name="role_color" class="color-select" aria-label="Цвет роли">
+                        <option value="#5c7cfa">Синий</option>
+                        <option value="#15aabf">Голубой</option>
+                        <option value="#2f9e44">Зелёный</option>
+                        <option value="#e8890c">Оранжевый</option>
+                        <option value="#e03131">Красный</option>
+                        <option value="#9c36b5">Фиолетовый</option>
+                        <option value="#e64980">Розовый</option>
+                        <option value="#868e96" selected>Серый</option>
+                      </select>
+                    </td>
+                  </tr>
+                </template>
                 <label>Настройки в JSON
                   <textarea class="code-input" name="config_json" rows="6">{}</textarea>
                 </label>
               </div>
+              <input type="hidden" name="roles_json" id="roles-json" value="">
+              <input type="hidden" name="roles" value="Коммандер,Исполнитель,Проверяющий">
             </details>
             <div class="form-actions">
-              <button type="submit">Создать проект</button>
-              <button type="button" class="ghost" data-toggle="create-project">Отменить</button>
+              <button type="submit" class="icon-action" title="Создать проект" aria-label="Создать проект"><svg class="icon"><use href="#icon-check"></use></svg></button>
+              <button type="button" class="icon-action ghost" data-toggle="create-project" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
             </div>
           </form>
         </td>
