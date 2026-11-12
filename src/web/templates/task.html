@@ -143,6 +143,12 @@
 
 <section class="card">
   <h2>Файлы</h2>
+  {% if folder_missing %}
+    <p class="muted">Папка задачи ещё не создана.</p>
+    <form class="inline-form" method="post" action="/tasks/{{ task.number }}/folder">
+      <button type="submit">Создать папку задачи</button>
+    </form>
+  {% endif %}
   {% if files.is_empty() %}
     <p class="muted">Файлов пока нет.</p>
   {% else %}
@@ -155,6 +161,25 @@
       {% endfor %}
     </ul>
   {% endif %}
+  <details>
+    <summary>Прикрепить файл</summary>
+    <form class="form" method="post" action="/tasks/{{ task.number }}/files" enctype="multipart/form-data">
+      <label>Файл
+        <input type="file" name="file" required>
+      </label>
+      <label>Название
+        <input name="title">
+      </label>
+      <label>Тип
+        <select name="kind">
+          <option value="file">Файл</option>
+          <option value="image">Картинка</option>
+          <option value="code">Код</option>
+        </select>
+      </label>
+      <button type="submit">Загрузить</button>
+    </form>
+  </details>
 </section>
 
 <section class="card">

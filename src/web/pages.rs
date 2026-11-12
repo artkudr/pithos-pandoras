@@ -1,7 +1,8 @@
+use std::path::Path as FsPath;
 use std::sync::Arc;
 
 use askama::Template;
-use axum::extract::{Path, Query, State};
+use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
@@ -11,8 +12,8 @@ use serde::Deserialize;
 
 use crate::domain::{AppError, ErrorCode, TaskListItem};
 use crate::service::{
-    Service, TaskBlockRequest, TaskCloseRequest, TaskNoteRequest, TaskReopenRequest,
-    TaskResumeRequest, TaskSetStatusRequest, TaskUpdateRequest, HUMAN_ACTOR,
+    FileAddRequest, Service, TaskBlockRequest, TaskCloseRequest, TaskNoteRequest,
+    TaskReopenRequest, TaskResumeRequest, TaskSetStatusRequest, TaskUpdateRequest, HUMAN_ACTOR,
 };
 
 #[derive(Clone)]
@@ -38,6 +39,11 @@ pub fn router(service: Arc<Service>, workspace: String) -> axum::Router {
         .route("/tasks/{number}/resume", post(resume_task))
         .route("/tasks/{number}/reopen", post(reopen_task))
         .route("/tasks/{number}/update", post(update_task))
+        .route("/tasks/{number}/folder", post(create_folder))
+        .route(
+            "/tasks/{number}/files",
+            post(upload_file).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),
+        )
         .route("/search", get(search))
         .route("/stats", get(stats))
         .route("/settings", get(settings))
@@ -114,6 +120,10 @@ async fn task_page(
         .map(|status| status.kind.clone())
         .unwrap_or_default();
     let status_title = data.status.map(|status| status.title).unwrap_or_default();
+    let folder_missing = data
+        .warnings
+        .iter()
+        .any(|warning| warning == "folder_missing");
 
     let template = TaskTemplate {
         workspace: state.workspace.clone(),
@@ -129,6 +139,7 @@ async fn task_page(
             updated_at: data.task.updated_at,
         },
         statuses,
+        folder_missing,
         current_stage: data.current_stage.map(|stage| StageView {
             role: stage.role,
             round: stage.round,
@@ -174,7 +185,7 @@ async fn task_page(
                 at: event.at,
             })
             .collect(),
-        warnings: data.warnings,
+        warnings: data.warnings.into_iter().map(warning_text).collect(),
     };
 
     render(template)
@@ -226,6 +237,101 @@ async fn close_task(
             role: Some(String::from(HUMAN_ACTOR)),
         })
         .await?;
+    Ok(Redirect::to(&format!("/tasks/{number}")))
+}
+
+async fn create_folder(
+    State(state): State<AppState>,
+    Path(number): Path<i64>,
+) -> Result<Redirect, WebError> {
+    state
+        .service
+        .ensure_task_folder(&state.workspace, &number.to_string())
+        .await?;
+    Ok(Redirect::to(&format!("/tasks/{number}")))
+}
+
+async fn upload_file(
+    State(state): State<AppState>,
+    Path(number): Path<i64>,
+    mut multipart: Multipart,
+) -> Result<Redirect, WebError> {
+    let mut title = String::new();
+    let mut kind = String::from("file");
+    let mut file_name = String::from("file.bin");
+    let mut bytes: Option<Vec<u8>> = None;
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|err| WebError::bad_request(format!("multipart: {err}")))?
+    {
+        let name = field.name().unwrap_or_default().to_string();
+        match name.as_str() {
+            "title" => {
+                title = field
+                    .text()
+                    .await
+                    .map_err(|err| WebError::bad_request(format!("title: {err}")))?;
+            }
+            "kind" => {
+                kind = field
+                    .text()
+                    .await
+                    .map_err(|err| WebError::bad_request(format!("kind: {err}")))?;
+            }
+            "file" => {
+                if let Some(name) = field.file_name() {
+                    file_name = name.to_string();
+                }
+                bytes = Some(
+                    field
+                        .bytes()
+                        .await
+                        .map_err(|err| WebError::bad_request(format!("file: {err}")))?
+                        .to_vec(),
+                );
+            }
+            _ => {}
+        }
+    }
+
+    let bytes = bytes.ok_or_else(|| WebError::bad_request("Файл не выбран"))?;
+    let kind = match kind.as_str() {
+        "image" | "code" | "file" => kind,
+        _ => String::from("file"),
+    };
+    let folder = state
+        .service
+        .ensure_task_folder(&state.workspace, &number.to_string())
+        .await?;
+    let file_name = sanitize_file_name(&file_name);
+    let mut path = FsPath::new(&folder).join(&file_name);
+    if path.exists() {
+        let id = uuid::Uuid::now_v7().simple().to_string();
+        path = FsPath::new(&folder).join(format!("{id}-{file_name}"));
+    }
+    tokio::fs::write(&path, &bytes)
+        .await
+        .map_err(|err| WebError::internal(format!("записать файл: {err}")))?;
+    let title = if title.trim().is_empty() {
+        file_name
+    } else {
+        title.trim().to_string()
+    };
+
+    state
+        .service
+        .file_add(FileAddRequest {
+            workspace: Some(state.workspace.clone()),
+            task: Some(number.to_string()),
+            role: Some(String::from(HUMAN_ACTOR)),
+            path: Some(path.to_string_lossy().to_string()),
+            title: Some(title),
+            kind: Some(kind),
+        })
+        .await?;
+
     Ok(Redirect::to(&format!("/tasks/{number}")))
 }
 
@@ -438,6 +544,38 @@ fn normalize(value: Option<String>) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
+fn warning_text(code: String) -> String {
+    match code.as_str() {
+        "folder_missing" => String::from(
+            "Папка задачи не создана. Её можно создать кнопкой ниже или загрузкой файла.",
+        ),
+        "resource_busy" => String::from("Ресурс занят другой активной задачей."),
+        _ => code,
+    }
+}
+
+fn sanitize_file_name(name: &str) -> String {
+    let base = FsPath::new(name)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("file.bin");
+    let sanitized: String = base
+        .chars()
+        .map(|ch| {
+            if ch.is_alphanumeric() || ch == '.' || ch == '-' || ch == '_' {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    if sanitized.is_empty() {
+        String::from("file.bin")
+    } else {
+        sanitized
+    }
+}
+
 fn render<T: Template>(template: T) -> Result<Html<String>, WebError> {
     template
         .render()
@@ -530,6 +668,7 @@ struct TaskTemplate {
     workspace: String,
     task: TaskView,
     statuses: Vec<StatusOptionView>,
+    folder_missing: bool,
     current_stage: Option<StageView>,
     reports: Vec<ReportView>,
     files: Vec<FileView>,
@@ -667,6 +806,15 @@ impl WebError {
     fn internal(message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: message.into(),
+            hint: None,
+            allowed: Vec::new(),
+        }
+    }
+
+    fn bad_request(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::BAD_REQUEST,
             message: message.into(),
             hint: None,
             allowed: Vec::new(),

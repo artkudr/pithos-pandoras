@@ -10,7 +10,7 @@ description = "Локальный сервис задач PithosPandoras"
 ammonia = "4.2.4"
 anyhow = "1.0.104"
 askama = "0.16.1"
-axum = "0.8.9"
+axum = { version = "0.8.9", features = ["multipart"] }
 clap = { version = "4.6.7", features = ["derive"] }
 mime_guess = "2.0.5"
 pulldown-cmark = "0.13.6"

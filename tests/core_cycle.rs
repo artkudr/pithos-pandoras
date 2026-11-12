@@ -142,6 +142,7 @@ async fn human_creates_task_with_human_origin() {
         .await
         .unwrap();
     assert_eq!(created.task.origin, "human");
+    assert!(std::path::Path::new(&created.folder_path).exists());
 
     let timeline = service
         .task_timeline(
@@ -187,6 +188,28 @@ async fn human_note_and_block_use_human_actor() {
         .await
         .unwrap();
     assert_eq!(blocked.status_id, "blocked");
+}
+
+#[tokio::test]
+async fn ensure_task_folder_creates_folder_for_agent_task() {
+    let (service, _dir) = setup("{}").await;
+    let task = create_task(&service, "Папка").await;
+    let task_ref = task.task.number.to_string();
+
+    let folder = service
+        .ensure_task_folder("PithosPandoras", &task_ref)
+        .await
+        .unwrap();
+    assert!(std::path::Path::new(&folder).exists());
+
+    let card = service
+        .task_get(Some(String::from("PithosPandoras")), Some(task_ref))
+        .await
+        .unwrap();
+    assert!(!card
+        .warnings
+        .iter()
+        .any(|warning| warning.as_str() == "folder_missing"));
 }
 
 #[tokio::test]

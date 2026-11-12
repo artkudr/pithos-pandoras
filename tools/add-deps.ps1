@@ -11,7 +11,7 @@ try {
     }
 
     cargo add tokio --features full
-    cargo add axum
+    cargo add axum --features multipart
     cargo add rmcp --features transport-streamable-http-server
     cargo add rusqlite --features bundled
     cargo add askama

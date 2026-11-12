@@ -259,6 +259,7 @@ impl Service {
         let date = db::local_date();
         let route = route.map(str::to_string);
         let resource = resource.map(str::to_string);
+        let create_folder = origin == "human";
         let origin = origin.to_string();
         let actor = actor.to_string();
         let title = title.to_string();
@@ -303,7 +304,12 @@ impl Service {
         let folder_path = Path::new(&workspace.root_path)
             .join(&workspace.tasks_dir)
             .join(&folder_name);
-        let warning = if folder_path.exists() {
+        let folder_existed = folder_path.exists();
+        if !folder_existed && create_folder {
+            std::fs::create_dir_all(&folder_path)
+                .map_err(|err| AppError::io(format!("создать папку задачи: {err}")))?;
+        }
+        let warning = if folder_existed {
             Some(String::from("folder_exists"))
         } else {
             None
@@ -381,6 +387,22 @@ impl Service {
             Err(StoreError::NotFound) => Err(AppError::task_unknown(&task_ref_for_error)),
             Err(err) => Err(err.into()),
         }
+    }
+
+    pub async fn ensure_task_folder(
+        &self,
+        workspace: &str,
+        task: &str,
+    ) -> Result<String, AppError> {
+        let view = self.workspace_view(workspace).await?;
+        let workspace = view.workspace.clone();
+        let task = self.task(&workspace.id, task).await?;
+        let folder_path = Path::new(&workspace.root_path)
+            .join(&workspace.tasks_dir)
+            .join(&task.folder_name);
+        std::fs::create_dir_all(&folder_path)
+            .map_err(|err| AppError::io(format!("создать папку задачи: {err}")))?;
+        Ok(folder_path.to_string_lossy().to_string())
     }
 
     pub async fn task_page(
