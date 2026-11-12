@@ -66,3 +66,14 @@ pub fn list_files(conn: &Connection, task_id: &str) -> Result<Vec<FileRecord>, S
     }
     Ok(out)
 }
+
+pub fn list_all_files(conn: &Connection) -> Result<Vec<FileRecord>, StoreError> {
+    let sql = format!("SELECT {FILE_COLUMNS} FROM files ORDER BY created_at, id");
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map([], map_file)?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row?);
+    }
+    Ok(out)
+}

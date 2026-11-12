@@ -970,8 +970,11 @@ impl Service {
             .store
             .write(move |conn| {
                 let tx = conn.transaction()?;
-                if !tasks::status_exists(&tx, &workspace_id, &status)? {
-                    return Err(StoreError::NotFound);
+                let status_row = tasks::status_by_id(&tx, &workspace_id, &status)?;
+                if status_row.kind == "done" && stages::open_stage(&tx, &task_id)?.is_some() {
+                    return Err(StoreError::Conflict(
+                        "нельзя закрыть задачу с открытым этапом".to_string(),
+                    ));
                 }
                 let task = tasks::set_status(&tx, &task_id, &status)?;
                 let payload = serde_json::json!({"status": &status}).to_string();
@@ -1124,7 +1127,11 @@ impl Service {
         let query = require_field(query.as_deref(), "query")?.to_string();
         let view = self.workspace_view(&name).await?;
         let workspace_id = view.workspace.id;
-        let pattern = format!("%{query}%");
+        let fts_query = query
+            .split_whitespace()
+            .map(|term| format!("\"{}\"", term.replace('"', "\"\"")))
+            .collect::<Vec<_>>()
+            .join(" AND ");
 
         let items = self
             .store
@@ -1140,14 +1147,19 @@ impl Service {
                      LEFT JOIN workspace_statuses s
                        ON s.workspace_id = t.workspace_id AND s.id = t.status_id
                      WHERE t.workspace_id = ?1
-                       AND (t.title LIKE ?2 OR t.statement LIKE ?2
-                            OR EXISTS (SELECT 1 FROM reports r
-                                       WHERE r.task_id = t.id AND r.content LIKE ?2)
-                            OR EXISTS (SELECT 1 FROM comments c
-                                       WHERE c.task_id = t.id AND c.body LIKE ?2))
+                       AND t.id IN (
+                           SELECT task_id FROM tasks_fts
+                            WHERE tasks_fts MATCH ?2
+                           UNION
+                           SELECT task_id FROM reports_fts
+                            WHERE reports_fts MATCH ?2
+                           UNION
+                           SELECT task_id FROM comments_fts
+                            WHERE comments_fts MATCH ?2
+                       )
                      ORDER BY t.number DESC",
                 )?;
-                let rows = stmt.query_map(rusqlite::params![workspace_id, pattern], |row| {
+                let rows = stmt.query_map(rusqlite::params![workspace_id, fts_query], |row| {
                     Ok(TaskListItem {
                         id: row.get(0)?,
                         number: row.get(1)?,

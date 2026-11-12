@@ -58,6 +58,11 @@ tools/index.ps1 affected "Symbol" -Depth 3
 
 Рабочее пространство: PithosPandoras
 
+## MCP
+
+Сервер на `/mcp` требует `Authorization: Bearer <ключ из pithos-pandoras.key>`.
+Ключ в git не класть.
+
 ## Память
 
 - Сюда — только невыводимые, стабильные, влияющие на поведение факты.

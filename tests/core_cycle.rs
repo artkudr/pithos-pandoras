@@ -6,7 +6,7 @@ use pithos_pandoras::domain::ErrorCode;
 use pithos_pandoras::service::{
     FileAddRequest, FileGetRequest, ReportAddRequest, ReportPutRequest, Service,
     StageFinishRequest, StageStartRequest, TaskBlockRequest, TaskCloseRequest, TaskCreateRequest,
-    TaskResumeRequest,
+    TaskResumeRequest, TaskSetStatusRequest,
 };
 use pithos_pandoras::store::{self, Store};
 use tempfile::TempDir;
@@ -419,14 +419,59 @@ async fn file_add_stays_inside_project_root() {
 #[tokio::test]
 async fn search_finds_title_and_report_text() {
     let (service, _dir) = setup("{}").await;
-    create_task(&service, "Уникальное имя").await;
+    let task = create_task(&service, "Уникальное имя").await;
+    let task_ref = task.task.number.to_string();
 
-    let found = service
+    service
+        .report_add(ReportAddRequest {
+            workspace: Some(String::from("PithosPandoras")),
+            task: Some(task_ref),
+            role: Some(String::from("Исполнитель")),
+            kind: Some(String::from("note")),
+            title: Some(String::from("Заметка")),
+            content: Some(String::from("в отчёте есть апельсин")),
+        })
+        .await
+        .unwrap();
+
+    let by_title = service
         .task_search(
             Some(String::from("PithosPandoras")),
             Some(String::from("Уникальное")),
         )
         .await
         .unwrap();
-    assert_eq!(found.len(), 1);
+    assert_eq!(by_title.len(), 1);
+
+    let by_report = service
+        .task_search(
+            Some(String::from("PithosPandoras")),
+            Some(String::from("апельсин")),
+        )
+        .await
+        .unwrap();
+    assert_eq!(by_report.len(), 1);
+}
+
+#[tokio::test]
+async fn set_status_done_with_open_stage_is_conflict() {
+    let (service, _dir) = setup("{}").await;
+    let task = create_task(&service, "Статус").await;
+    let task_ref = task.task.number.to_string();
+
+    service
+        .stage_start(start_req(&task_ref, "Исполнитель"))
+        .await
+        .unwrap();
+
+    let error = service
+        .task_set_status(TaskSetStatusRequest {
+            workspace: Some(String::from("PithosPandoras")),
+            task: Some(task_ref),
+            role: Some(String::from("Коммандер")),
+            status: Some(String::from("done")),
+        })
+        .await
+        .unwrap_err();
+    assert_eq!(error.code, ErrorCode::Conflict);
 }

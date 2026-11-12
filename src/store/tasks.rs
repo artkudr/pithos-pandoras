@@ -270,6 +270,30 @@ pub fn status_exists(
     Ok(count > 0)
 }
 
+pub fn status_by_id(
+    conn: &Connection,
+    workspace_id: &str,
+    status_id: &str,
+) -> Result<Status, StoreError> {
+    conn.query_row(
+        "SELECT id, title, kind, color, sort
+         FROM workspace_statuses
+         WHERE workspace_id = ?1 AND id = ?2",
+        params![workspace_id, status_id],
+        |row| {
+            Ok(Status {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                kind: row.get(2)?,
+                color: row.get(3)?,
+                sort: row.get(4)?,
+            })
+        },
+    )
+    .optional()?
+    .ok_or(StoreError::NotFound)
+}
+
 pub fn resource_busy(
     conn: &Connection,
     workspace_id: &str,

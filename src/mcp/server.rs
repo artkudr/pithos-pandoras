@@ -2,6 +2,10 @@
 
 use std::sync::Arc;
 
+use axum::extract::{Request, State};
+use axum::http::{header::AUTHORIZATION, StatusCode};
+use axum::middleware::{self, Next};
+use axum::response::Response;
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{ErrorCode as McpErrorCode, ErrorData};
@@ -613,10 +617,40 @@ pub fn mcp_service(
     )
 }
 
-pub fn router(service: Arc<Service>) -> axum::Router {
+#[derive(Clone)]
+struct AppState {
+    key: Arc<String>,
+}
+
+async fn require_key(
+    State(state): State<AppState>,
+    request: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    let authorized = request
+        .headers()
+        .get(AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .map(|value| value == state.key.as_str())
+        .unwrap_or(false);
+
+    if authorized {
+        Ok(next.run(request).await)
+    } else {
+        Err(StatusCode::UNAUTHORIZED)
+    }
+}
+
+pub fn router(service: Arc<Service>, key: String) -> axum::Router {
+    let state = AppState { key: Arc::new(key) };
+    let protected = axum::Router::new()
+        .nest_service("/mcp", mcp_service(service))
+        .layer(middleware::from_fn_with_state(state, require_key));
+
     axum::Router::new()
         .route("/health", axum::routing::get(health))
-        .nest_service("/mcp", mcp_service(service))
+        .merge(protected)
 }
 
 async fn health() -> &'static str {

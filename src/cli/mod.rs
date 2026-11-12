@@ -1,6 +1,6 @@
 //! CLI приложения: serve, init, doctor.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -35,6 +35,10 @@ pub struct ServeArgs {
     pub port: u16,
     #[arg(long, default_value = "pithos-pandoras.db")]
     pub db: PathBuf,
+    #[arg(long)]
+    pub key: Option<String>,
+    #[arg(long, default_value = "pithos-pandoras.key")]
+    pub key_file: PathBuf,
 }
 
 impl Default for ServeArgs {
@@ -43,6 +47,8 @@ impl Default for ServeArgs {
             host: String::from("127.0.0.1"),
             port: 8787,
             db: PathBuf::from("pithos-pandoras.db"),
+            key: None,
+            key_file: PathBuf::from("pithos-pandoras.key"),
         }
     }
 }
@@ -87,9 +93,10 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
 }
 
 async fn serve(args: ServeArgs) -> anyhow::Result<()> {
+    let key = load_or_create_key(args.key.as_deref(), &args.key_file)?;
     let store = Arc::new(Store::open(&args.db).context("открыть базу")?);
     let service = Arc::new(Service::new(store));
-    let app = mcp::server::router(service);
+    let app = mcp::server::router(service, key);
 
     let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr)
@@ -97,10 +104,36 @@ async fn serve(args: ServeArgs) -> anyhow::Result<()> {
         .with_context(|| format!("занять адрес {addr}"))?;
 
     println!("PithosPandoras: http://{addr}/mcp");
+    println!("MCP key file: {}", args.key_file.display());
     axum::serve(listener, app)
         .await
         .context("запустить сервер")?;
     Ok(())
+}
+
+fn load_or_create_key(key: Option<&str>, key_file: &Path) -> anyhow::Result<String> {
+    if let Some(key) = key {
+        let key = key.trim();
+        if key.is_empty() {
+            return Err(anyhow::anyhow!("--key не может быть пустым"));
+        }
+        return Ok(key.to_string());
+    }
+
+    if key_file.exists() {
+        let key = std::fs::read_to_string(key_file)
+            .with_context(|| format!("прочитать ключ {}", key_file.display()))?;
+        let key = key.trim().to_string();
+        if !key.is_empty() {
+            return Ok(key);
+        }
+    }
+
+    let key = uuid::Uuid::now_v7().simple().to_string();
+    std::fs::write(key_file, &key)
+        .with_context(|| format!("записать ключ {}", key_file.display()))?;
+    println!("MCP key: {key}");
+    Ok(key)
 }
 
 async fn init(args: InitArgs) -> anyhow::Result<()> {
@@ -153,6 +186,34 @@ async fn doctor(args: DoctorArgs) -> anyhow::Result<()> {
         .read(store::stages::list_open_stages)
         .await
         .context("открытые этапы")?;
+    let integrity = store
+        .read(|conn| {
+            let value: String = conn.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
+            Ok(value)
+        })
+        .await
+        .context("integrity_check")?;
+    let foreign_key_violations = store
+        .read(|conn| {
+            let mut stmt = conn.prepare("PRAGMA foreign_key_check")?;
+            let mut rows = stmt.query([])?;
+            let mut count = 0_i64;
+            while rows.next()?.is_some() {
+                count += 1;
+            }
+            Ok(count)
+        })
+        .await
+        .context("foreign_key_check")?;
+    let files = store
+        .read(store::files::list_all_files)
+        .await
+        .context("файлы")?;
+    let missing: Vec<_> = files
+        .iter()
+        .filter(|file| !Path::new(&file.path).exists())
+        .collect();
+    let port_free = std::net::TcpListener::bind(("127.0.0.1", 8787)).is_ok();
 
     println!("schema_version: {version}");
     println!("workspaces: {}", names.join(", "));
@@ -160,6 +221,13 @@ async fn doctor(args: DoctorArgs) -> anyhow::Result<()> {
     for stage in open_stages {
         println!("  {} {} круг {}", stage.task_id, stage.role, stage.round);
     }
+    println!("integrity: {integrity}");
+    println!("foreign_key_violations: {foreign_key_violations}");
+    println!("missing_files: {}", missing.len());
+    for file in missing {
+        println!("  {} {}", file.id, file.path);
+    }
+    println!("port_8787: {}", if port_free { "free" } else { "busy" });
 
     Ok(())
 }
