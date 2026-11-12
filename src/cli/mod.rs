@@ -100,6 +100,21 @@ async fn serve(args: ServeArgs) -> anyhow::Result<()> {
     let key = load_or_create_key(args.key.as_deref(), &args.key_file)?;
     let store = Arc::new(Store::open(&args.db).context("открыть базу")?);
     let service = Arc::new(Service::new(store));
+
+    if let Err(err) = service.workspace_get(Some(args.workspace.clone())).await {
+        if err.code == crate::domain::ErrorCode::WorkspaceUnknown {
+            eprintln!("Пространство `{}` не найдено.", args.workspace);
+            eprintln!("Создайте его:");
+            eprintln!(
+                "  cargo run -- init --workspace {} --root . --db {}",
+                args.workspace,
+                args.db.display()
+            );
+            std::process::exit(1);
+        }
+        return Err(err.into());
+    }
+
     let app = mcp::server::router(service.clone(), key)
         .merge(web::pages::router(service, args.workspace.clone()));
 
