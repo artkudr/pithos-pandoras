@@ -16,7 +16,7 @@ use crate::domain::{
     StageFinish, StageStart, Task, TaskCard, TaskCreated, TaskListItem, TaskStats, WorkspaceView,
 };
 use crate::service::{
-    FileAddRequest, FileGetRequest, ReportAddRequest, ReportGetRequest, Service,
+    FileAddRequest, FileGetRequest, ReportAddRequest, ReportGetRequest, ReportPutRequest, Service,
     StageFinishRequest, StageStartRequest, TaskBlockRequest, TaskCloseRequest, TaskCreateRequest,
     TaskNoteRequest, TaskReopenRequest, TaskResumeRequest, TaskSetStatusRequest, TaskUpdateRequest,
 };
@@ -85,6 +85,16 @@ pub struct ReportGetArgs {
     pub workspace: Option<String>,
     pub task: Option<String>,
     pub report: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ReportPutArgs {
+    pub workspace: Option<String>,
+    pub task: Option<String>,
+    pub role: Option<String>,
+    pub kind: Option<String>,
+    pub title: Option<String>,
+    pub content: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -331,6 +341,28 @@ impl PithosServer {
                 workspace: args.workspace,
                 task: args.task,
                 report: args.report,
+            })
+            .await
+            .map(Json)
+            .map_err(Into::into)
+    }
+
+    #[tool(
+        name = "report_put",
+        description = "Добавляет отчёт другого вида в открытый этап"
+    )]
+    pub async fn report_put(
+        &self,
+        Parameters(args): Parameters<ReportPutArgs>,
+    ) -> Result<Json<Report>, ErrorData> {
+        self.service
+            .report_put(ReportPutRequest {
+                workspace: args.workspace,
+                task: args.task,
+                role: args.role,
+                kind: args.kind,
+                title: args.title,
+                content: args.content,
             })
             .await
             .map(Json)

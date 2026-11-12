@@ -66,6 +66,16 @@ pub struct ReportGetRequest {
 }
 
 #[derive(Debug, Clone)]
+pub struct ReportPutRequest {
+    pub workspace: Option<String>,
+    pub task: Option<String>,
+    pub role: Option<String>,
+    pub kind: Option<String>,
+    pub title: Option<String>,
+    pub content: Option<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct TaskCloseRequest {
     pub workspace: Option<String>,
     pub task: Option<String>,
@@ -524,6 +534,86 @@ impl Service {
             .await?;
 
         Ok(report)
+    }
+
+    pub async fn report_put(
+        &self,
+        req: ReportPutRequest,
+    ) -> Result<crate::domain::Report, AppError> {
+        let workspace_name = require_workspace(req.workspace.as_deref())?.to_string();
+        let task_ref = require_task(req.task.as_deref())?.to_string();
+        let role = require_role(req.role.as_deref())?.to_string();
+        let kind = require_field(req.kind.as_deref(), "kind")?.to_string();
+        validate_kind(&kind, STAGE_KINDS)?;
+        let title = require_field(req.title.as_deref(), "title")?.to_string();
+        let content = require_field(req.content.as_deref(), "content")?.to_string();
+
+        let view = self.workspace_view(&workspace_name).await?;
+        ensure_role(&view.roles, &role)?;
+        let workspace = view.workspace.clone();
+        let task = self.task(&workspace.id, &task_ref).await?;
+        let task_id = task.id.clone();
+
+        let open = self
+            .store
+            .read({
+                let task_id = task_id.clone();
+                move |conn| stages::open_stage(conn, &task_id)
+            })
+            .await?;
+        let Some(stage) = open else {
+            return Err(AppError::conflict("нет открытого этапа"));
+        };
+        if stage.role != role {
+            return Err(AppError::conflict("открыт этап другой роли"));
+        }
+
+        let stage_id = stage.id.clone();
+        let now = db::now_rfc3339();
+        let kind_for_write = kind.clone();
+        let title_for_write = title.clone();
+        let result = self
+            .store
+            .write(move |conn| {
+                let tx = conn.transaction()?;
+                let report = reports::insert_report(
+                    &tx,
+                    &task_id,
+                    Some(&stage_id),
+                    None,
+                    &kind_for_write,
+                    &title_for_write,
+                    &content,
+                    &now,
+                )?;
+                let payload =
+                    serde_json::json!({"kind": &kind_for_write, "title": &title_for_write})
+                        .to_string();
+                events::insert_event(
+                    &tx,
+                    &task_id,
+                    "report_added",
+                    Some(&stage_id),
+                    None,
+                    &payload,
+                    "agent",
+                )?;
+                tx.commit()?;
+                Ok(report)
+            })
+            .await;
+
+        match result {
+            Ok(report) => Ok(report),
+            Err(StoreError::Sqlite(rusqlite::Error::SqliteFailure(ffi_err, _)))
+                if ffi_err.code == rusqlite::ErrorCode::ConstraintViolation =>
+            {
+                Err(AppError::conflict(
+                    "в этом этапе уже есть отчёт такого вида",
+                ))
+            }
+            Err(err) => Err(err.into()),
+        }
     }
 
     pub async fn report_get(

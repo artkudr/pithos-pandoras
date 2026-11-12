@@ -4,8 +4,9 @@ use std::sync::Arc;
 
 use pithos_pandoras::domain::ErrorCode;
 use pithos_pandoras::service::{
-    FileAddRequest, FileGetRequest, ReportAddRequest, Service, StageFinishRequest,
-    StageStartRequest, TaskBlockRequest, TaskCloseRequest, TaskCreateRequest, TaskResumeRequest,
+    FileAddRequest, FileGetRequest, ReportAddRequest, ReportPutRequest, Service,
+    StageFinishRequest, StageStartRequest, TaskBlockRequest, TaskCloseRequest, TaskCreateRequest,
+    TaskResumeRequest,
 };
 use pithos_pandoras::store::{self, Store};
 use tempfile::TempDir;
@@ -220,6 +221,44 @@ async fn role_inputs_take_latest_finished_report() {
     assert_eq!(started.inputs.len(), 1);
     assert_eq!(started.inputs[0].role, "Исполнитель");
     assert_eq!(started.inputs[0].round, 1);
+}
+
+#[tokio::test]
+async fn report_put_adds_second_kind_to_open_stage() {
+    let (service, _dir) = setup("{}").await;
+    let task = create_task(&service, "С планом").await;
+    let task_ref = task.task.number.to_string();
+
+    service
+        .stage_start(start_req(&task_ref, "Исполнитель"))
+        .await
+        .unwrap();
+
+    let plan = service
+        .report_put(ReportPutRequest {
+            workspace: Some(String::from("PithosPandoras")),
+            task: Some(task_ref.clone()),
+            role: Some(String::from("Исполнитель")),
+            kind: Some(String::from("plan")),
+            title: Some(String::from("План")),
+            content: Some(String::from("шаги")),
+        })
+        .await
+        .unwrap();
+    assert_eq!(plan.kind, "plan");
+
+    let duplicate = service
+        .report_put(ReportPutRequest {
+            workspace: Some(String::from("PithosPandoras")),
+            task: Some(task_ref),
+            role: Some(String::from("Исполнитель")),
+            kind: Some(String::from("plan")),
+            title: Some(String::from("План 2")),
+            content: Some(String::from("ещё шаги")),
+        })
+        .await
+        .unwrap_err();
+    assert_eq!(duplicate.code, ErrorCode::Conflict);
 }
 
 #[tokio::test]
