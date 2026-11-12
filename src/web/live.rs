@@ -1,26 +1,27 @@
-//! Поток изменений: SSE для живой перерисовки страницы.
+//! Поток изменений: счётчик правок базы для живой перерисовки страницы.
 //!
 //! Один watcher на процесс следит за версией базы через `PRAGMA data_version`.
 //! Значение меняется при коммите любого другого соединения, поэтому видны и
 //! действия человека, и действия агентов через MCP.
+//!
+//! Страница спрашивает счётчик коротким запросом. Долгое соединение (SSE)
+//! не используем: браузер держит на хост не больше шести соединений, и открытая
+//! страница с потоком занимала одно из них — после нескольких переходов
+//! подключение вставало.
 
-use std::convert::Infallible;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
-use axum::response::sse::{Event, KeepAlive, Sse};
 use rusqlite::Connection;
-use tokio::sync::broadcast;
-use tokio_stream::wrappers::BroadcastStream;
-use tokio_stream::{Stream, StreamExt};
 
 /// Опрос базы раз в секунду: чаще незачем, страница всё равно перерисовывается.
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
-const CHANNEL_CAPACITY: usize = 8;
 
 #[derive(Clone)]
 pub struct Live {
-    tx: broadcast::Sender<()>,
+    revision: Arc<AtomicU64>,
 }
 
 impl Live {
@@ -31,14 +32,14 @@ impl Live {
     }
 
     pub fn spawn_every(path: PathBuf, interval: Duration) -> Self {
-        let (tx, _) = broadcast::channel(CHANNEL_CAPACITY);
-        let sender = tx.clone();
+        let revision = Arc::new(AtomicU64::new(0));
+        let counter = revision.clone();
 
         let conn = match crate::store::db::open_connection(&path) {
             Ok(conn) => conn,
             Err(err) => {
                 tracing::error!(%err, "поток изменений: не открыть базу");
-                return Self { tx };
+                return Self { revision };
             }
         };
         let mut last = data_version(&conn);
@@ -51,25 +52,17 @@ impl Live {
                     continue;
                 }
                 last = current;
-                // Никто не слушает — сообщать некому, но версию уже запомнили.
-                let _ = sender.send(());
+                counter.fetch_add(1, Ordering::Relaxed);
             }
         });
 
-        Self { tx }
+        Self { revision }
     }
 
-    pub fn subscribe(&self) -> broadcast::Receiver<()> {
-        self.tx.subscribe()
+    /// Номер последнего изменения. Растёт на 1 при каждой чужой записи в базу.
+    pub fn revision(&self) -> u64 {
+        self.revision.load(Ordering::Relaxed)
     }
-}
-
-/// Ответ `/events`: сообщение `change` на каждое изменение базы.
-pub fn stream(live: &Live) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    let rx = live.subscribe();
-    let stream = BroadcastStream::new(rx)
-        .map(|_| -> Result<Event, Infallible> { Ok(Event::default().event("change").data("1")) });
-    Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
 fn data_version(conn: &Connection) -> i64 {

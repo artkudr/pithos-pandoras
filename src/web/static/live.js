@@ -1,14 +1,16 @@
-// Живое обновление страницы: сервер шлёт `change` на каждое изменение базы.
+// Живое обновление страницы: сервер держит счётчик правок базы, страница
+// спрашивает его коротким запросом. Долгое соединение не открываем — иначе
+// браузер упирается в предел соединений на хост и страницы перестают грузиться.
+//
 // Если человек что-то печатает, страница не перезагружается — показываем полоску
 // с кнопкой, чтобы не потерять введённое.
 (function () {
-  if (!window.EventSource) {
-    return;
-  }
+  var NOTICE_INTERVAL = 1500;
 
   var notice = document.getElementById('live-notice');
   var reload = document.getElementById('live-reload');
   var reloading = false;
+  var revision = null;
 
   function hasDraft() {
     // Открытая форма внутри <details> — человек работает с ней, перезагрузка
@@ -45,14 +47,7 @@
     }
   }
 
-  if (reload) {
-    reload.addEventListener('click', function () {
-      window.location.reload();
-    });
-  }
-
-  var source = new EventSource('/events');
-  source.addEventListener('change', function () {
+  function refresh() {
     if (reloading) {
       return;
     }
@@ -62,5 +57,42 @@
     }
     reloading = true;
     window.location.reload();
-  });
+  }
+
+  function schedule() {
+    window.setTimeout(poll, NOTICE_INTERVAL);
+  }
+
+  function poll() {
+    window
+      .fetch('/events', { cache: 'no-store' })
+      .then(function (response) {
+        return response.ok ? response.json() : null;
+      })
+      .then(function (data) {
+        if (!data) {
+          return;
+        }
+        if (revision === null) {
+          revision = data.rev;
+          return;
+        }
+        if (data.rev !== revision) {
+          revision = data.rev;
+          refresh();
+        }
+      })
+      .catch(function () {
+        // Сервер перезапускается — попробуем на следующем шаге.
+      })
+      .then(schedule);
+  }
+
+  if (reload) {
+    reload.addEventListener('click', function () {
+      window.location.reload();
+    });
+  }
+
+  poll();
 })();

@@ -628,10 +628,18 @@ async fn live_reports_change_after_write() {
         dir.path().join("test.db"),
         Duration::from_millis(20),
     );
-    let mut changes = live.subscribe();
+    let before = live.revision();
 
     create_task(&service, "Живая").await;
 
-    let got = tokio::time::timeout(Duration::from_secs(5), changes.recv()).await;
-    assert!(got.is_ok(), "поток изменений молчит");
+    let changed = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if live.revision() != before {
+                return true;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    })
+    .await;
+    assert!(changed.is_ok(), "поток изменений молчит");
 }

@@ -6,7 +6,7 @@ use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
-use axum::Form;
+use axum::{Form, Json};
 use rust_embed::RustEmbed;
 use serde::Deserialize;
 
@@ -73,7 +73,8 @@ pub fn router(service: Arc<Service>, project: String, live: Live) -> axum::Route
 }
 
 async fn live_events(State(state): State<AppState>) -> impl IntoResponse {
-    crate::web::live::stream(&state.live)
+    let body = serde_json::json!({ "rev": state.live.revision() });
+    ([(header::CACHE_CONTROL, "no-store")], Json(body))
 }
 
 async fn board(State(state): State<AppState>) -> Result<Html<String>, WebError> {
