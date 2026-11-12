@@ -25,7 +25,7 @@ pub struct Cli {
 pub enum Command {
     /// Запустить сервер для агентов
     Serve(ServeArgs),
-    /// Создать пространство, статусы и роли
+    /// Создать проект, статусы и роли
     Init(InitArgs),
     /// Проверить базу, схему и открытые этапы
     Doctor(DoctorArgs),
@@ -112,7 +112,7 @@ async fn serve(args: ServeArgs) -> anyhow::Result<()> {
 
     if let Err(err) = service.workspace_get(Some(args.workspace.clone())).await {
         if err.code == crate::domain::ErrorCode::WorkspaceUnknown {
-            eprintln!("Пространство `{}` не найдено.", args.workspace);
+            eprintln!("Проект `{}` не найден.", args.workspace);
             eprintln!("Создайте его:");
             eprintln!(
                 "  cargo run -- init --workspace {} --root . --db {}",
@@ -203,7 +203,7 @@ async fn init(args: InitArgs) -> anyhow::Result<()> {
             )
         })
         .await
-        .context("создать пространство")?;
+        .context("создать проект")?;
 
     println!("{}", serde_json::to_string_pretty(&workspace)?);
     Ok(())
@@ -219,7 +219,7 @@ async fn doctor(args: DoctorArgs) -> anyhow::Result<()> {
     let names = store
         .read(store::workspaces::list_workspace_names)
         .await
-        .context("пространства")?;
+        .context("проекты")?;
     let open_stages = store
         .read(store::stages::list_open_stages)
         .await

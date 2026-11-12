@@ -39,6 +39,41 @@ pub fn list_workspace_names(conn: &Connection) -> Result<Vec<String>, StoreError
     Ok(out)
 }
 
+/// Статус проекта вместе с числом задач в нём. Нужен списку проектов.
+#[derive(Debug, Clone)]
+pub struct StatusTaskCount {
+    pub workspace_id: String,
+    pub id: String,
+    pub title: String,
+    pub color: Option<String>,
+    pub count: i64,
+}
+
+pub fn list_status_counts(conn: &Connection) -> Result<Vec<StatusTaskCount>, StoreError> {
+    let mut stmt = conn.prepare(
+        "SELECT s.workspace_id, s.id, s.title, s.color, COUNT(t.id)
+         FROM workspace_statuses s
+         LEFT JOIN tasks t
+           ON t.workspace_id = s.workspace_id AND t.status_id = s.id
+         GROUP BY s.workspace_id, s.id, s.title, s.color, s.sort
+         ORDER BY s.sort, s.id",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(StatusTaskCount {
+            workspace_id: row.get(0)?,
+            id: row.get(1)?,
+            title: row.get(2)?,
+            color: row.get(3)?,
+            count: row.get(4)?,
+        })
+    })?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row?);
+    }
+    Ok(out)
+}
+
 pub fn list_roles(conn: &Connection, workspace_id: &str) -> Result<Vec<Role>, StoreError> {
     let mut stmt = conn.prepare(
         "SELECT name, color, sort FROM workspace_roles
@@ -212,18 +247,18 @@ pub fn init_workspace(
     )?;
 
     let statuses = [
-        ("new", "Новая", "active", 10_i64),
-        ("active", "В работе", "active", 20),
-        ("waiting", "Ожидание", "waiting", 30),
-        ("blocked", "Остановлена", "blocked", 40),
-        ("done", "Закрыта", "done", 50),
+        ("new", "Новая", "active", "#5c7cfa", 10_i64),
+        ("active", "В работе", "active", "#1c7ed6", 20),
+        ("waiting", "Ожидание", "waiting", "#e8890c", 30),
+        ("blocked", "Остановлена", "blocked", "#e03131", 40),
+        ("done", "Закрыта", "done", "#2f9e44", 50),
     ];
-    for (id, title, kind, sort) in statuses {
+    for (id, title, kind, color, sort) in statuses {
         tx.execute(
             "INSERT OR IGNORE INTO workspace_statuses
              (workspace_id, id, title, kind, color, sort)
-             VALUES (?1, ?2, ?3, ?4, NULL, ?5)",
-            params![workspace_id, id, title, kind, sort],
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![workspace_id, id, title, kind, color, sort],
         )?;
     }
 

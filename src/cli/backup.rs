@@ -32,9 +32,9 @@ pub async fn run(args: BackupArgs) -> anyhow::Result<()> {
     let workspaces = store
         .read(store::workspaces::list_workspaces)
         .await
-        .context("пространства")?;
+        .context("проекты")?;
     if workspaces.is_empty() {
-        println!("Пространств нет.");
+        println!("Проектов нет.");
     } else {
         println!("Файлы задач в копию не входят, скопируйте папки отдельно:");
         for workspace in workspaces {

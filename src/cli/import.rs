@@ -10,7 +10,7 @@ use crate::store::{db, events, files, reports, tasks, workspaces, Store};
 
 #[derive(Debug, Args)]
 pub struct ImportArgs {
-    /// Пространство, в которое импортируем
+    /// Проект, в который импортируем
     #[arg(long)]
     pub workspace: String,
     /// Папка со старыми задачами
@@ -52,7 +52,7 @@ pub async fn run(store: &Store, workspace: &str, path: &Path) -> anyhow::Result<
             move |conn| workspaces::workspace_view(conn, &workspace)
         })
         .await
-        .context("пространство")?;
+        .context("проект")?;
     let workspace_id = view.workspace.id;
 
     let mut imported = 0_u32;

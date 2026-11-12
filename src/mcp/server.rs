@@ -210,7 +210,7 @@ impl PithosServer {
 
     #[tool(
         name = "workspace_get",
-        description = "Настройки пространства: роли, статусы, config"
+        description = "Настройки проекта: роли, статусы, config"
     )]
     pub async fn workspace_get(
         &self,
@@ -245,7 +245,7 @@ impl PithosServer {
             .map_err(Into::into)
     }
 
-    #[tool(name = "task_list", description = "Список задач пространства")]
+    #[tool(name = "task_list", description = "Список задач проекта")]
     pub async fn task_list(
         &self,
         Parameters(args): Parameters<TaskListArgs>,
@@ -524,7 +524,7 @@ impl PithosServer {
             .map_err(Into::into)
     }
 
-    #[tool(name = "task_stats", description = "Агрегаты пространства")]
+    #[tool(name = "task_stats", description = "Агрегаты проекта")]
     pub async fn task_stats(
         &self,
         Parameters(args): Parameters<TaskStatsArgs>,

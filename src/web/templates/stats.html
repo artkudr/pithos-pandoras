@@ -18,7 +18,7 @@
       </thead>
       <tbody>
         {% for count in by_status %}
-          <tr><td>{{ count.title }}</td><td class="num">{{ count.count }}</td></tr>
+          <tr><td><span class="dot" style="--dot: {{ count.color }}" aria-hidden="true"></span>{{ count.title }}</td><td class="num">{{ count.count }}</td></tr>
         {% endfor %}
       </tbody>
     </table>

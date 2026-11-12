@@ -152,7 +152,7 @@ pub fn run() -> anyhow::Result<()> {
                 let store = Arc::new(Store::open(Path::new(&db)).context("открыть базу")?);
                 let service = Arc::new(Service::new(store));
                 if let Err(err) = service.workspace_get(Some(workspace.clone())).await {
-                    tracing::error!(%err, "пространство не найдено");
+                    tracing::error!(%err, "проект не найден");
                     return Err(err.into());
                 }
                 let app = mcp::server::router(service.clone(), key).merge(web::pages::router(

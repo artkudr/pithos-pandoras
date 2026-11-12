@@ -89,6 +89,7 @@ async fn board(State(state): State<AppState>) -> Result<Html<String>, WebError> 
             .by_status
             .into_iter()
             .map(|count| StatusCountView {
+                color: status_color(&count.status_id, None),
                 title: count.title,
                 count: count.count,
             })
@@ -143,6 +144,12 @@ async fn task_page(
         .as_ref()
         .map(|status| status.kind.clone())
         .unwrap_or_default();
+    let status_color = status_color(
+        &status_id,
+        data.status
+            .as_ref()
+            .and_then(|status| status.color.as_deref()),
+    );
     let status_title = data.status.map(|status| status.title).unwrap_or_default();
     let folder_missing = data
         .warnings
@@ -159,6 +166,7 @@ async fn task_page(
             status: status_title,
             status_id,
             status_kind,
+            status_color,
             folder_name: data.task.folder_name,
             created_at: format_local_time(&data.task.created_at),
             updated_at: format_local_time(&data.task.updated_at),
@@ -476,6 +484,7 @@ async fn stats(State(state): State<AppState>) -> Result<Html<String>, WebError> 
             .by_status
             .into_iter()
             .map(|count| StatusCountView {
+                color: status_color(&count.status_id, None),
                 title: count.title,
                 count: count.count,
             })
@@ -521,10 +530,14 @@ async fn settings(
         statuses: view
             .statuses
             .into_iter()
-            .map(|status| SettingsStatusView {
-                id: status.id,
-                title: status.title,
-                kind_label: status_kind_label(&status.kind).to_string(),
+            .map(|status| {
+                let color = status_color(&status.id, status.color.as_deref());
+                SettingsStatusView {
+                    id: status.id,
+                    title: status.title,
+                    kind_label: status_kind_label(&status.kind).to_string(),
+                    color,
+                }
             })
             .collect(),
     };
@@ -535,16 +548,29 @@ async fn settings(
 async fn workspaces_page(State(state): State<AppState>) -> Result<Html<String>, WebError> {
     let current = state.current_workspace().await;
     let workspaces = state.service.list_workspaces().await?;
+    let counts = state.service.workspace_status_counts().await?;
+
     let template = WorkspacesTemplate {
         workspace: current.clone(),
         current: "workspaces",
         selected: current,
         workspaces: workspaces
             .into_iter()
-            .map(|workspace| WorkspaceItemView {
-                name: workspace.name,
-                root_path: workspace.root_path,
-                tasks_dir: workspace.tasks_dir,
+            .map(|workspace| {
+                let statuses = counts
+                    .iter()
+                    .filter(|status| status.workspace_id == workspace.id && status.count > 0)
+                    .map(|status| StatusChipView {
+                        title: status.title.clone(),
+                        count: status.count,
+                        color: status_color(&status.id, status.color.as_deref()),
+                    })
+                    .collect();
+                WorkspaceItemView {
+                    name: workspace.name,
+                    root_path: workspace.root_path,
+                    statuses,
+                }
             })
             .collect(),
     };
@@ -681,6 +707,7 @@ fn board_task_view(task: TaskListItem) -> BoardTaskView {
         number: task.number,
         title: task.title,
         status: task.status_title,
+        status_color: status_color(&task.status_id, None),
         current_role: task.current_role.unwrap_or_else(|| String::from("—")),
         waiting_for: if task.waiting_for.is_empty() {
             String::from("—")
@@ -825,6 +852,35 @@ fn status_kind_label(kind: &str) -> &'static str {
         "done" => "закрыта",
         _ => "неизвестно",
     }
+}
+
+/// Цвет статуса: из базы, если он задан, иначе по известному идентификатору.
+fn status_color(id: &str, color: Option<&str>) -> String {
+    if let Some(value) = color {
+        let trimmed = value.trim();
+        if is_hex_color(trimmed) {
+            return trimmed.to_string();
+        }
+    }
+    match id {
+        "new" => "#5c7cfa",
+        "active" => "#1c7ed6",
+        "waiting" => "#e8890c",
+        "blocked" => "#e03131",
+        "done" => "#2f9e44",
+        _ => "#868e96",
+    }
+    .to_string()
+}
+
+fn is_hex_color(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    let digits = match bytes.len() {
+        4 => &bytes[1..],
+        7 => &bytes[1..],
+        _ => return false,
+    };
+    value.starts_with('#') && digits.iter().all(u8::is_ascii_hexdigit)
 }
 
 #[derive(Deserialize)]
@@ -983,7 +1039,13 @@ struct WorkspacesTemplate {
 struct WorkspaceItemView {
     name: String,
     root_path: String,
-    tasks_dir: String,
+    statuses: Vec<StatusChipView>,
+}
+
+struct StatusChipView {
+    title: String,
+    count: i64,
+    color: String,
 }
 
 #[derive(Template)]
@@ -999,6 +1061,7 @@ struct BoardTaskView {
     number: i64,
     title: String,
     status: String,
+    status_color: String,
     current_role: String,
     waiting_for: String,
     updated_at: String,
@@ -1007,6 +1070,7 @@ struct BoardTaskView {
 struct StatusCountView {
     title: String,
     count: i64,
+    color: String,
 }
 
 struct StatusOptionView {
@@ -1021,6 +1085,7 @@ struct TaskView {
     status: String,
     status_id: String,
     status_kind: String,
+    status_color: String,
     folder_name: String,
     created_at: String,
     updated_at: String,
@@ -1070,6 +1135,7 @@ struct SettingsStatusView {
     id: String,
     title: String,
     kind_label: String,
+    color: String,
 }
 struct WebError {
     status: StatusCode,

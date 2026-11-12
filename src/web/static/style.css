@@ -65,6 +65,9 @@ a:hover {
 }
 
 .workspace {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
   font-size: 14px;
 }
@@ -177,6 +180,87 @@ h3 {
   color: var(--accent);
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dot, var(--muted));
+  flex: none;
+  vertical-align: middle;
+}
+
+.dot-current {
+  background: #2f9e44;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #2f9e44 22%, transparent);
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 4px 2px 0;
+  padding: 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.status-chip strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.mark-col {
+  width: 26px;
+  padding-right: 0;
+}
+
+tr.is-current td {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.path {
+  overflow-wrap: anywhere;
+}
+
+.spaced {
+  margin-top: 28px;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  border-color: transparent;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 

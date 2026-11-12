@@ -220,7 +220,7 @@ async fn strict_errors_name_the_problem() {
         .task_create(TaskCreateRequest {
             workspace: None,
             role: Some(String::from("Коммандер")),
-            title: Some(String::from("Без пространства")),
+            title: Some(String::from("Без проекта")),
             statement: Some(String::from("постановка")),
             route: None,
             resource: None,

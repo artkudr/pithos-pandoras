@@ -12,7 +12,7 @@
 {% endmatch %}
 
 <section class="card">
-  <h2>Пути пространства</h2>
+  <h2>Пути проекта</h2>
   <form class="form" method="post" action="/settings/paths">
     <label>Корень проекта
       <input name="root_path" value="{{ root_path }}" required>
@@ -40,12 +40,15 @@
       {% endfor %}
     </ul>
   {% endif %}
-  <form class="form" method="post" action="/settings/roles">
-    <label>Новая роль
-      <input name="name" required>
-    </label>
-    <button type="submit">Добавить роль</button>
-  </form>
+  <details>
+    <summary>Добавить роль</summary>
+    <form class="form" method="post" action="/settings/roles">
+      <label>Новая роль
+        <input name="name" required>
+      </label>
+      <button type="submit">Добавить роль</button>
+    </form>
+  </details>
 </section>
 
 <section class="card">
@@ -59,38 +62,41 @@
         {% for status in statuses %}
           <tr>
             <td><code>{{ status.id }}</code></td>
-            <td>{{ status.title }}</td>
+            <td><span class="dot" style="--dot: {{ status.color }}" aria-hidden="true"></span>{{ status.title }}</td>
             <td>{{ status.kind_label }}</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-  <form class="form" method="post" action="/settings/statuses">
-    <div class="form-row">
-      <label>ID
-        <input name="id" required>
-      </label>
-      <label>Название
-        <input name="title" required>
-      </label>
-    </div>
-    <div class="form-row">
-      <label>Тип
-        <select name="kind">
-          <option value="active">в работе</option>
-          <option value="waiting">ожидание</option>
-          <option value="blocked">остановлена</option>
-          <option value="done">закрыта</option>
-        </select>
-      </label>
-      <label>Сортировка
-        <input name="sort" type="number" value="100">
-      </label>
-    </div>
-    <p class="muted">Строка с тем же ID будет заменена. Сортировка: меньше число — выше в списке.</p>
-    <button type="submit">Сохранить статус</button>
-  </form>
+  <details>
+    <summary>Добавить или изменить статус</summary>
+    <form class="form" method="post" action="/settings/statuses">
+      <div class="form-row">
+        <label>ID
+          <input name="id" required>
+        </label>
+        <label>Название
+          <input name="title" required>
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Тип
+          <select name="kind">
+            <option value="active">в работе</option>
+            <option value="waiting">ожидание</option>
+            <option value="blocked">остановлена</option>
+            <option value="done">закрыта</option>
+          </select>
+        </label>
+        <label>Сортировка
+          <input name="sort" type="number" value="100">
+        </label>
+      </div>
+      <p class="muted">Строка с тем же ID будет заменена. Сортировка: меньше число — выше в списке.</p>
+      <button type="submit">Сохранить статус</button>
+    </form>
+  </details>
 </section>
 
 <section class="card">

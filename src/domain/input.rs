@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 
-/// Настройки пространства из `workspaces.config_json`.
+/// Настройки проекта из `workspaces.config_json`.
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct WorkspaceConfig {
     #[serde(default)]

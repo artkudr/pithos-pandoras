@@ -68,17 +68,14 @@ impl AppError {
     }
 
     pub fn workspace_missing() -> Self {
-        Self::new(
-            ErrorCode::WorkspaceMissing,
-            "Не указано рабочее пространство",
-        )
-        .with_hint("Возьмите имя из блока `## Сервис задач` в `AGENTS.md` проекта.")
+        Self::new(ErrorCode::WorkspaceMissing, "Не указан проект")
+            .with_hint("Возьмите имя из блока `## Сервис задач` в `AGENTS.md` проекта.")
     }
 
     pub fn workspace_unknown(name: &str, allowed: Vec<String>) -> Self {
         Self::new(
             ErrorCode::WorkspaceUnknown,
-            format!("Рабочее пространство `{name}` не найдено"),
+            format!("Проект `{name}` не найден"),
         )
         .with_allowed(allowed)
     }
@@ -105,7 +102,7 @@ impl AppError {
     pub fn task_unknown(task: &str) -> Self {
         Self::new(
             ErrorCode::TaskUnknown,
-            format!("Задача `{task}` не найдена в пространстве"),
+            format!("Задача `{task}` не найдена в проекте"),
         )
     }
 

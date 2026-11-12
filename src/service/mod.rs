@@ -30,6 +30,15 @@ pub struct TaskReport {
 }
 
 #[derive(Debug, Clone)]
+pub struct WorkspaceStatusCount {
+    pub workspace_id: String,
+    pub id: String,
+    pub title: String,
+    pub color: Option<String>,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone)]
 pub struct TaskPageData {
     pub task: Task,
     pub status: Option<Status>,
@@ -190,6 +199,21 @@ impl Service {
     pub async fn list_workspaces(&self) -> Result<Vec<Workspace>, AppError> {
         let workspaces = self.store.read(workspaces::list_workspaces).await?;
         Ok(workspaces)
+    }
+
+    /// Статусы всех проектов с числом задач: для списка проектов.
+    pub async fn workspace_status_counts(&self) -> Result<Vec<WorkspaceStatusCount>, AppError> {
+        let rows = self.store.read(workspaces::list_status_counts).await?;
+        Ok(rows
+            .into_iter()
+            .map(|row| WorkspaceStatusCount {
+                workspace_id: row.workspace_id,
+                id: row.id,
+                title: row.title,
+                color: row.color,
+                count: row.count,
+            })
+            .collect())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -374,7 +398,7 @@ impl Service {
             .find(|status| status.id == "new")
             .or_else(|| view.statuses.iter().find(|status| status.kind == "active"))
             .map(|status| status.id.clone())
-            .ok_or_else(|| AppError::not_found("В пространстве нет активного статуса"))?;
+            .ok_or_else(|| AppError::not_found("В проекте нет активного статуса"))?;
 
         let workspace = view.workspace.clone();
         let workspace_for_write = workspace.clone();

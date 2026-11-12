@@ -1,34 +1,47 @@
 {% extends "base.html" %}
 
-{% block title %}Пространства — {{ workspace }}{% endblock %}
+{% block title %}Проекты — {{ workspace }}{% endblock %}
 
 {% block content %}
-<h1>Пространства</h1>
+<h1>Проекты</h1>
 
 <div class="table-wrap">
-  <table class="board">
+  <table class="board projects">
     <thead>
       <tr>
-        <th>Имя</th>
+        <th class="mark-col"><span class="sr-only">Текущий</span></th>
+        <th>Проект</th>
         <th>Корень</th>
-        <th>Папка задач</th>
-        <th scope="col">Действие</th>
+        <th>Статусы</th>
       </tr>
     </thead>
     <tbody>
       {% for item in workspaces %}
-        <tr>
-          <td>{{ item.name }}</td>
-          <td>{{ item.root_path }}</td>
-          <td>{{ item.tasks_dir }}</td>
+        <tr{% if item.name == selected %} class="is-current"{% endif %}>
+          <td class="mark-col">
+            {% if item.name == selected %}
+              <span class="dot dot-current" aria-hidden="true"></span>
+              <span class="sr-only">Текущий проект</span>
+            {% endif %}
+          </td>
           <td>
             {% if item.name == selected %}
-              <span class="kind">выбрано</span>
+              {{ item.name }}
             {% else %}
               <form class="inline-form" method="post" action="/workspaces/select">
                 <input type="hidden" name="name" value="{{ item.name }}">
-                <button type="submit">Выбрать пространство</button>
+                <button type="submit" class="link-button" aria-label="Выбрать проект {{ item.name }}">{{ item.name }}</button>
               </form>
+            {% endif %}
+          </td>
+          <td class="path">{{ item.root_path }}</td>
+          <td>
+            {% if item.statuses.is_empty() %}
+              <span class="muted">задач нет</span>
+            {% else %}
+              {% for status in item.statuses %}
+                <span class="status-chip"><span class="dot" style="--dot: {{ status.color }}" aria-hidden="true"></span>{{ status.title }} <strong class="num">{{ status.count }}</strong></span>
+              {% endfor %}
             {% endif %}
           </td>
         </tr>
@@ -37,33 +50,35 @@
   </table>
 </div>
 
-<section class="card">
-  <h2>Новое пространство</h2>
-  <form class="form" method="post" action="/workspaces/create">
-    <label>Имя
-      <input name="name" required>
-    </label>
-    <label>Корень проекта
-      <input name="root_path" value="." required>
-    </label>
-    <details>
-      <summary>Дополнительно</summary>
-      <div class="form-row">
-        <label>Папка задач
-          <input name="tasks_dir" value="Задачи" required>
-        </label>
-        <label>Шаблон папки
-          <input name="folder_pattern" value="{number} - {date}" required>
-        </label>
-      </div>
-      <label>Роли через запятую
-        <input name="roles" value="Коммандер,Исполнитель,Проверяющий">
+<section class="card spaced">
+  <details>
+    <summary>Новый проект</summary>
+    <form class="form" method="post" action="/workspaces/create">
+      <label>Название
+        <input name="name" required>
       </label>
-      <label>Настройки в JSON
-        <textarea class="code-input" name="config_json" rows="6">{}</textarea>
+      <label>Корень проекта
+        <input name="root_path" value="." required>
       </label>
-    </details>
-    <button type="submit">Создать пространство</button>
-  </form>
+      <details>
+        <summary>Дополнительно</summary>
+        <div class="form-row">
+          <label>Папка задач
+            <input name="tasks_dir" value="Задачи" required>
+          </label>
+          <label>Шаблон папки
+            <input name="folder_pattern" value="{number} - {date}" required>
+          </label>
+        </div>
+        <label>Роли через запятую
+          <input name="roles" value="Коммандер,Исполнитель,Проверяющий">
+        </label>
+        <label>Настройки в JSON
+          <textarea class="code-input" name="config_json" rows="6">{}</textarea>
+        </label>
+      </details>
+      <button type="submit">Создать проект</button>
+    </form>
+  </details>
 </section>
 {% endblock %}

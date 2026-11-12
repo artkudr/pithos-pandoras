@@ -56,7 +56,7 @@ tools/index.ps1 affected "Symbol" -Depth 3
 
 ## Сервис задач
 
-Рабочее пространство: PithosPandoras
+Проект: PithosPandoras
 
 ## MCP
 
