@@ -59,8 +59,8 @@
               </div>
               <input type="hidden" name="color" value="#5c7cfa">
             </div>
-            <button type="submit" class="icon-action" title="Добавить роль" aria-label="Добавить роль"><svg class="icon"><use href="#icon-check"></use></svg></button>
-            <button type="button" class="icon-action ghost" data-toggle="create-role" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+            <button type="submit" class="form-ok" title="Добавить роль" aria-label="Добавить роль"><svg class="icon"><use href="#icon-check"></use></svg></button>
+            <button type="button" class="form-cancel" data-toggle="create-role" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
           </form>
         </td>
       </tr>
@@ -95,8 +95,8 @@
                   </div>
                   <input type="hidden" name="color" value="{% if role.color.is_empty() %}#5c7cfa{% else %}{{ role.color }}{% endif %}">
                 </div>
-                <button type="submit" class="icon-action" title="Сохранить цвет" aria-label="Сохранить цвет"><svg class="icon"><use href="#icon-check"></use></svg></button>
-                <button type="button" class="icon-action ghost" data-toggle="edit-role-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+                <button type="submit" class="form-ok" title="Сохранить цвет" aria-label="Сохранить цвет"><svg class="icon"><use href="#icon-check"></use></svg></button>
+                <button type="button" class="form-cancel" data-toggle="edit-role-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
               </form>
             </td>
           </tr>
@@ -147,8 +147,8 @@
               </label>
             </div>
             <div class="form-actions">
-              <button type="submit" class="icon-action" title="Добавить статус" aria-label="Добавить статус"><svg class="icon"><use href="#icon-check"></use></svg></button>
-              <button type="button" class="icon-action ghost" data-toggle="create-status" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+              <button type="submit" class="form-ok" title="Добавить статус" aria-label="Добавить статус"><svg class="icon"><use href="#icon-check"></use></svg></button>
+              <button type="button" class="form-cancel" data-toggle="create-status" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
             </div>
           </form>
         </td>
@@ -184,8 +184,8 @@
                 <input name="sort" type="number" value="{{ status.sort }}">
               </label>
               <div class="form-actions">
-                <button type="submit" class="icon-action" title="Сохранить статус" aria-label="Сохранить статус"><svg class="icon"><use href="#icon-check"></use></svg></button>
-                <button type="button" class="icon-action ghost" data-toggle="edit-status-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+                <button type="submit" class="form-ok" title="Сохранить статус" aria-label="Сохранить статус"><svg class="icon"><use href="#icon-check"></use></svg></button>
+                <button type="button" class="form-cancel" data-toggle="edit-status-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
               </div>
             </form>
           </td>
