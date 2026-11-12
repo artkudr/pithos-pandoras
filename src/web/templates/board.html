@@ -14,22 +14,51 @@
   {% endfor %}
 </section>
 
-{% if tasks.is_empty() %}
-  <p class="muted">Задач пока нет. Создайте первую в форме ниже.</p>
-{% else %}
-  <div class="table-wrap">
-    <table class="board">
-      <thead>
+<div class="table-wrap">
+  <table class="board">
+    <thead>
+      <tr>
+        <th class="add-col">
+          <button type="button" class="add-button" data-toggle="create-task" aria-expanded="false" aria-controls="create-task" title="Новая задача" aria-label="Новая задача">+</button>
+          <span class="sr-only">№</span>
+        </th>
+        <th>Задача</th>
+        <th>Статус</th>
+        <th>Текущая роль</th>
+        <th>Ожидает</th>
+        <th>Обновлена</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="create-row" id="create-task" hidden>
+        <td colspan="6">
+          <form class="form" method="post" action="/tasks">
+            <label>Название
+              <input name="title" required>
+            </label>
+            <label>Постановка
+              <textarea name="statement" rows="3" required></textarea>
+            </label>
+            <div class="form-row">
+              <label>Маршрут
+                <input name="route" placeholder="например, полный">
+              </label>
+              <label>Ресурс
+                <input name="resource" placeholder="например, backend">
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit">Создать задачу</button>
+              <button type="button" class="ghost" data-toggle="create-task">Отменить</button>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% if tasks.is_empty() %}
         <tr>
-          <th>№</th>
-          <th>Задача</th>
-          <th>Статус</th>
-          <th>Текущая роль</th>
-          <th>Ожидает</th>
-          <th>Обновлена</th>
+          <td colspan="6" class="muted">Задач пока нет. Нажмите «+», чтобы создать первую.</td>
         </tr>
-      </thead>
-      <tbody>
+      {% else %}
         {% for task in tasks %}
           <tr>
             <td class="num">{{ task.number }}</td>
@@ -40,31 +69,8 @@
             <td class="muted nowrap">{{ task.updated_at }}</td>
           </tr>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% endif %}
-
-<section class="card">
-  <details {% if tasks.is_empty() %}open{% endif %}>
-    <summary>Новая задача</summary>
-    <form class="form" method="post" action="/tasks">
-      <label>Название
-        <input name="title" required>
-      </label>
-      <label>Постановка
-        <textarea name="statement" rows="3" required></textarea>
-      </label>
-      <div class="form-row">
-        <label>Маршрут
-          <input name="route" placeholder="например, полный">
-        </label>
-        <label>Ресурс
-          <input name="resource" placeholder="например, backend">
-        </label>
-      </div>
-      <button type="submit">Создать задачу</button>
-    </form>
-  </details>
-</section>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

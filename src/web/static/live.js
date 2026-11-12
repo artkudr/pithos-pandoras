@@ -13,8 +13,11 @@
   var revision = null;
 
   function hasDraft() {
-    // Открытая форма внутри <details> — человек работает с ней, перезагрузка
-    // закроет блок и собьёт с места.
+    // Открытая форма создания или раскрытый блок — человек работает с ними,
+    // перезагрузка закроет форму и собьёт с места.
+    if (document.querySelector('.create-row:not([hidden]) form')) {
+      return true;
+    }
     if (document.querySelector('details[open] form')) {
       return true;
     }

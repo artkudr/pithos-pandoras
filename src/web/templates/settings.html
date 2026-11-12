@@ -31,24 +31,42 @@
 
 <section class="card">
   <h2>Роли</h2>
-  {% if roles.is_empty() %}
-    <p class="muted">Ролей нет. Добавьте роль, чтобы агенты могли работать с задачами.</p>
-  {% else %}
-    <ul class="files">
-      {% for role in roles %}
-        <li>{{ role }}</li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-  <details>
-    <summary>Добавить роль</summary>
-    <form class="form" method="post" action="/settings/roles">
-      <label>Новая роль
-        <input name="name" required>
-      </label>
-      <button type="submit">Добавить роль</button>
-    </form>
-  </details>
+  <div class="table-wrap">
+    <table class="board">
+      <thead>
+        <tr>
+          <th class="add-col">
+            <button type="button" class="add-button" data-toggle="create-role" aria-expanded="false" aria-controls="create-role" title="Добавить роль" aria-label="Добавить роль">+</button>
+            <span class="sr-only">Роль</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="create-row" id="create-role" hidden>
+          <td>
+            <form class="form" method="post" action="/settings/roles">
+              <label>Новая роль
+                <input name="name" required>
+              </label>
+              <div class="form-actions">
+                <button type="submit">Добавить роль</button>
+                <button type="button" class="ghost" data-toggle="create-role">Отменить</button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        {% if roles.is_empty() %}
+          <tr>
+            <td class="muted">Ролей нет. Нажмите «+», чтобы добавить первую.</td>
+          </tr>
+        {% else %}
+          {% for role in roles %}
+            <tr><td>{{ role }}</td></tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <section class="card">
@@ -56,9 +74,48 @@
   <div class="table-wrap">
     <table class="board">
       <thead>
-        <tr><th>ID</th><th>Название</th><th>Тип</th></tr>
+        <tr>
+          <th class="add-col">
+            <button type="button" class="add-button" data-toggle="create-status" aria-expanded="false" aria-controls="create-status" title="Добавить или изменить статус" aria-label="Добавить или изменить статус">+</button>
+            <span class="sr-only">ID</span>
+          </th>
+          <th>Название</th>
+          <th>Тип</th>
+        </tr>
       </thead>
       <tbody>
+        <tr class="create-row" id="create-status" hidden>
+          <td colspan="3">
+            <form class="form" method="post" action="/settings/statuses">
+              <div class="form-row">
+                <label>ID
+                  <input name="id" required>
+                </label>
+                <label>Название
+                  <input name="title" required>
+                </label>
+              </div>
+              <div class="form-row">
+                <label>Тип
+                  <select name="kind">
+                    <option value="active">в работе</option>
+                    <option value="waiting">ожидание</option>
+                    <option value="blocked">остановлена</option>
+                    <option value="done">закрыта</option>
+                  </select>
+                </label>
+                <label>Сортировка
+                  <input name="sort" type="number" value="100">
+                </label>
+              </div>
+              <p class="muted">Строка с тем же ID будет заменена. Сортировка: меньше число — выше в списке.</p>
+              <div class="form-actions">
+                <button type="submit">Сохранить статус</button>
+                <button type="button" class="ghost" data-toggle="create-status">Отменить</button>
+              </div>
+            </form>
+          </td>
+        </tr>
         {% for status in statuses %}
           <tr>
             <td><code>{{ status.id }}</code></td>
@@ -69,34 +126,6 @@
       </tbody>
     </table>
   </div>
-  <details>
-    <summary>Добавить или изменить статус</summary>
-    <form class="form" method="post" action="/settings/statuses">
-      <div class="form-row">
-        <label>ID
-          <input name="id" required>
-        </label>
-        <label>Название
-          <input name="title" required>
-        </label>
-      </div>
-      <div class="form-row">
-        <label>Тип
-          <select name="kind">
-            <option value="active">в работе</option>
-            <option value="waiting">ожидание</option>
-            <option value="blocked">остановлена</option>
-            <option value="done">закрыта</option>
-          </select>
-        </label>
-        <label>Сортировка
-          <input name="sort" type="number" value="100">
-        </label>
-      </div>
-      <p class="muted">Строка с тем же ID будет заменена. Сортировка: меньше число — выше в списке.</p>
-      <button type="submit">Сохранить статус</button>
-    </form>
-  </details>
 </section>
 
 <section class="card">

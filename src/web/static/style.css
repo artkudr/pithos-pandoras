@@ -200,6 +200,61 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 
+.add-col {
+  width: 44px;
+  padding-left: 9px;
+  padding-right: 9px;
+  text-align: center;
+}
+
+.add-button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--field-line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.add-button:hover,
+.add-button[aria-expanded="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.create-row td {
+  padding: 16px;
+  background: var(--panel);
+}
+
+.board tbody tr.create-row:hover td {
+  background: var(--panel);
+}
+
+.create-row .form {
+  max-width: 760px;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.ghost:hover {
+  border-color: var(--line);
+  color: var(--text);
+}
+
 .task-head {
   display: flex;
   align-items: center;
@@ -275,10 +330,6 @@ h3 {
 
 .path {
   overflow-wrap: anywhere;
-}
-
-.spaced {
-  margin-top: 28px;
 }
 
 .link-button {
