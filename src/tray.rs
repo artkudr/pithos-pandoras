@@ -99,6 +99,8 @@ fn build_tray() -> anyhow::Result<TrayIcon> {
 
     let tray = TrayIconBuilder::new()
         .with_menu(Box::new(menu))
+        .with_menu_on_left_click(false)
+        .with_menu_on_right_click(true)
         .with_tooltip("PithosPandoras")
         .with_icon(tray_icon_image()?)
         .build()?;
