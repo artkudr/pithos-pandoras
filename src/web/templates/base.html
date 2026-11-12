@@ -8,15 +8,24 @@
 </head>
 <body>
   <header class="top">
-    <a class="brand" href="/">PithosPandoras</a>
-    <span class="project"><span class="dot dot-current" aria-hidden="true"></span>{{ project }}</span>
-    <nav class="nav">
+    <div class="brand-block">
+      <a class="brand" href="/">PithosPandoras</a>
+      <span class="project"><span class="dot dot-current" aria-hidden="true"></span>{{ project }}</span>
+    </div>
+    <nav class="nav" aria-label="Разделы">
       <a href="/" {% if current == "board" %}aria-current="page"{% endif %}>Доска</a>
       <a href="/search" {% if current == "search" %}aria-current="page"{% endif %}>Поиск</a>
       <a href="/stats" {% if current == "stats" %}aria-current="page"{% endif %}>Статистика</a>
       <a href="/projects" {% if current == "projects" %}aria-current="page"{% endif %}>Проекты</a>
-      <a href="/settings" {% if current == "settings" %}aria-current="page"{% endif %}>Настройки</a>
     </nav>
+    <div class="top-end">
+      <a class="icon-button" href="/settings" title="Настройки" aria-label="Настройки" {% if current == "settings" %}aria-current="page"{% endif %}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </a>
+    </div>
   </header>
   <main class="page">
     <p class="live-notice" id="live-notice" role="status" hidden>
