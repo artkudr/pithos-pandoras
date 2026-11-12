@@ -4,8 +4,8 @@ use serde::Serialize;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ErrorCode {
-    WorkspaceMissing,
-    WorkspaceUnknown,
+    ProjectMissing,
+    ProjectUnknown,
     RoleMissing,
     RoleUnknown,
     TaskMissing,
@@ -20,8 +20,8 @@ pub enum ErrorCode {
 impl ErrorCode {
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::WorkspaceMissing => "workspace_missing",
-            Self::WorkspaceUnknown => "workspace_unknown",
+            Self::ProjectMissing => "project_missing",
+            Self::ProjectUnknown => "project_unknown",
             Self::RoleMissing => "role_missing",
             Self::RoleUnknown => "role_unknown",
             Self::TaskMissing => "task_missing",
@@ -67,14 +67,14 @@ impl AppError {
         self
     }
 
-    pub fn workspace_missing() -> Self {
-        Self::new(ErrorCode::WorkspaceMissing, "Не указан проект")
+    pub fn project_missing() -> Self {
+        Self::new(ErrorCode::ProjectMissing, "Не указан проект")
             .with_hint("Возьмите имя из блока `## Сервис задач` в `AGENTS.md` проекта.")
     }
 
-    pub fn workspace_unknown(name: &str, allowed: Vec<String>) -> Self {
+    pub fn project_unknown(name: &str, allowed: Vec<String>) -> Self {
         Self::new(
-            ErrorCode::WorkspaceUnknown,
+            ErrorCode::ProjectUnknown,
             format!("Проект `{name}` не найден"),
         )
         .with_allowed(allowed)

@@ -1,9 +1,9 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 
-/// Настройки проекта из `workspaces.config_json`.
+/// Настройки проекта из `projects.config_json`.
 #[derive(Debug, Clone, Deserialize, Default)]
-pub struct WorkspaceConfig {
+pub struct ProjectConfig {
     #[serde(default)]
     pub inputs: HashMap<String, Vec<InputRule>>,
 }

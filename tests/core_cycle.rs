@@ -24,7 +24,7 @@ async fn setup(config: &str) -> (Arc<Service>, TempDir) {
 
     store
         .write(move |conn| {
-            store::workspaces::init_workspace(
+            store::projects::init_project(
                 conn,
                 "PithosPandoras",
                 &root,
@@ -43,7 +43,7 @@ async fn setup(config: &str) -> (Arc<Service>, TempDir) {
 async fn create_task(service: &Service, title: &str) -> pithos_pandoras::domain::TaskCreated {
     service
         .task_create(TaskCreateRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             role: Some(String::from("Коммандер")),
             title: Some(title.to_string()),
             statement: Some(String::from("постановка")),
@@ -56,7 +56,7 @@ async fn create_task(service: &Service, title: &str) -> pithos_pandoras::domain:
 
 fn start_req(task: &str, role: &str) -> StageStartRequest {
     StageStartRequest {
-        workspace: Some(String::from("PithosPandoras")),
+        project: Some(String::from("PithosPandoras")),
         task: Some(task.to_string()),
         role: Some(role.to_string()),
     }
@@ -87,7 +87,7 @@ async fn core_cycle_creates_numbers_and_closes_task() {
 
     let finished = service
         .stage_finish(StageFinishRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(String::from("1")),
             role: Some(String::from("Исполнитель")),
             verdict: Some(String::from("готово")),
@@ -101,7 +101,7 @@ async fn core_cycle_creates_numbers_and_closes_task() {
 
     let note = service
         .report_add(ReportAddRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(String::from("1")),
             role: Some(String::from("Исполнитель")),
             kind: Some(String::from("note")),
@@ -125,7 +125,7 @@ async fn core_cycle_creates_numbers_and_closes_task() {
 
     let closed = service
         .task_close(TaskCloseRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(String::from("1")),
             role: Some(String::from("Коммандер")),
         })
@@ -163,7 +163,7 @@ async fn human_note_and_block_use_human_actor() {
 
     let comment = service
         .task_note(TaskNoteRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref.clone()),
             role: Some(String::from("человек")),
             text: Some(String::from("привет")),
@@ -178,7 +178,7 @@ async fn human_note_and_block_use_human_actor() {
         .unwrap();
     let blocked = service
         .task_block(TaskBlockRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref),
             role: Some(String::from("человек")),
             reason: Some(String::from("стоп")),
@@ -216,9 +216,9 @@ async fn ensure_task_folder_creates_folder_for_agent_task() {
 async fn strict_errors_name_the_problem() {
     let (service, _dir) = setup("{}").await;
 
-    let missing_workspace = service
+    let missing_project = service
         .task_create(TaskCreateRequest {
-            workspace: None,
+            project: None,
             role: Some(String::from("Коммандер")),
             title: Some(String::from("Без проекта")),
             statement: Some(String::from("постановка")),
@@ -227,18 +227,18 @@ async fn strict_errors_name_the_problem() {
         })
         .await
         .unwrap_err();
-    assert_eq!(missing_workspace.code, ErrorCode::WorkspaceMissing);
+    assert_eq!(missing_project.code, ErrorCode::ProjectMissing);
 
-    let unknown_workspace = service
-        .workspace_get(Some(String::from("nope")))
+    let unknown_project = service
+        .project_get(Some(String::from("nope")))
         .await
         .unwrap_err();
-    assert_eq!(unknown_workspace.code, ErrorCode::WorkspaceUnknown);
-    assert!(unknown_workspace.allowed.is_some());
+    assert_eq!(unknown_project.code, ErrorCode::ProjectUnknown);
+    assert!(unknown_project.allowed.is_some());
 
     let unknown_role = service
         .task_create(TaskCreateRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             role: Some(String::from("Плотник")),
             title: Some(String::from("Без роли")),
             statement: Some(String::from("постановка")),
@@ -251,7 +251,7 @@ async fn strict_errors_name_the_problem() {
 
     let missing_title = service
         .task_create(TaskCreateRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             role: Some(String::from("Коммандер")),
             title: None,
             statement: Some(String::from("постановка")),
@@ -282,7 +282,7 @@ async fn role_inputs_take_latest_finished_report() {
         .unwrap();
     service
         .stage_finish(StageFinishRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref.clone()),
             role: Some(String::from("Исполнитель")),
             verdict: Some(String::from("ok")),
@@ -314,7 +314,7 @@ async fn report_put_adds_second_kind_to_open_stage() {
 
     let plan = service
         .report_put(ReportPutRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref.clone()),
             role: Some(String::from("Исполнитель")),
             kind: Some(String::from("plan")),
@@ -327,7 +327,7 @@ async fn report_put_adds_second_kind_to_open_stage() {
 
     let duplicate = service
         .report_put(ReportPutRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref),
             role: Some(String::from("Исполнитель")),
             kind: Some(String::from("plan")),
@@ -352,7 +352,7 @@ async fn return_input_takes_report_that_sent_task_back() {
         .unwrap();
     service
         .stage_finish(StageFinishRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref.clone()),
             role: Some(String::from("Проверяющий")),
             verdict: Some(String::from("return")),
@@ -416,7 +416,7 @@ async fn block_finishes_stage_and_resume_clears_waiting() {
 
     let blocked = service
         .task_block(TaskBlockRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref.clone()),
             role: Some(String::from("Исполнитель")),
             reason: Some(String::from("нужны данные")),
@@ -436,7 +436,7 @@ async fn block_finishes_stage_and_resume_clears_waiting() {
 
     let resumed = service
         .task_resume(TaskResumeRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref),
             role: Some(String::from("Исполнитель")),
             reason: Some(String::from("данные есть")),
@@ -457,7 +457,7 @@ async fn file_add_stays_inside_project_root() {
     std::fs::write(&inside, b"hello").unwrap();
     let added = service
         .file_add(FileAddRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref.clone()),
             role: Some(String::from("Исполнитель")),
             path: Some(inside.to_string_lossy().to_string()),
@@ -470,7 +470,7 @@ async fn file_add_stays_inside_project_root() {
 
     let record = service
         .file_get(FileGetRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref.clone()),
             file: Some(added.file_id),
         })
@@ -482,7 +482,7 @@ async fn file_add_stays_inside_project_root() {
     std::fs::write(&outside, b"x").unwrap();
     let error = service
         .file_add(FileAddRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref),
             role: Some(String::from("Исполнитель")),
             path: Some(outside.to_string_lossy().to_string()),
@@ -502,7 +502,7 @@ async fn set_status_done_without_open_stage_closes_task() {
 
     let closed = service
         .task_set_status(TaskSetStatusRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref),
             role: Some(String::from("Коммандер")),
             status: Some(String::from("done")),
@@ -521,7 +521,7 @@ async fn block_without_waiting_does_not_set_waiting_since() {
 
     let blocked = service
         .task_block(TaskBlockRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref),
             role: Some(String::from("Коммандер")),
             reason: Some(String::from("стоп")),
@@ -542,7 +542,7 @@ async fn search_finds_title_and_report_text() {
 
     service
         .report_add(ReportAddRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref),
             role: Some(String::from("Исполнитель")),
             kind: Some(String::from("note")),
@@ -584,7 +584,7 @@ async fn set_status_done_with_open_stage_is_conflict() {
 
     let error = service
         .task_set_status(TaskSetStatusRequest {
-            workspace: Some(String::from("PithosPandoras")),
+            project: Some(String::from("PithosPandoras")),
             task: Some(task_ref),
             role: Some(String::from("Коммандер")),
             status: Some(String::from("done")),

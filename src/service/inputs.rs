@@ -1,17 +1,17 @@
 use rusqlite::Connection;
 
 use crate::domain::report::preview;
-use crate::domain::{RoleInput, Workspace, WorkspaceConfig};
+use crate::domain::{Project, ProjectConfig, RoleInput};
 use crate::store::{reports, StoreError};
 
 pub fn resolve(
     conn: &Connection,
-    workspace: &Workspace,
+    project: &Project,
     task_id: &str,
     role: &str,
     current_round: i64,
 ) -> Result<Vec<RoleInput>, StoreError> {
-    let config: WorkspaceConfig = serde_json::from_str(&workspace.config_json)?;
+    let config: ProjectConfig = serde_json::from_str(&project.config_json)?;
     let rules = config.inputs.get(role).cloned().unwrap_or_default();
     let mut out = Vec::new();
 

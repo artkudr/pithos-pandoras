@@ -9,12 +9,12 @@
 <body>
   <header class="top">
     <a class="brand" href="/">PithosPandoras</a>
-    <span class="workspace"><span class="dot dot-current" aria-hidden="true"></span>{{ workspace }}</span>
+    <span class="project"><span class="dot dot-current" aria-hidden="true"></span>{{ project }}</span>
     <nav class="nav">
       <a href="/" {% if current == "board" %}aria-current="page"{% endif %}>Доска</a>
       <a href="/search" {% if current == "search" %}aria-current="page"{% endif %}>Поиск</a>
       <a href="/stats" {% if current == "stats" %}aria-current="page"{% endif %}>Статистика</a>
-      <a href="/workspaces" {% if current == "workspaces" %}aria-current="page"{% endif %}>Проекты</a>
+      <a href="/projects" {% if current == "projects" %}aria-current="page"{% endif %}>Проекты</a>
       <a href="/settings" {% if current == "settings" %}aria-current="page"{% endif %}>Настройки</a>
     </nav>
   </header>

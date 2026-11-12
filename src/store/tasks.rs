@@ -6,14 +6,14 @@ use crate::domain::{Status, Task, TaskListItem};
 use super::db::now_rfc3339;
 use super::error::StoreError;
 
-const TASK_COLUMNS: &str = "id, workspace_id, number, folder_name, title, statement, status_id, \
+const TASK_COLUMNS: &str = "id, project_id, number, folder_name, title, statement, status_id, \
      route, route_snapshot, resource, waiting_for, waiting_ref, waiting_since, \
      created_at, updated_at, closed_at, origin";
 
 fn map_task(row: &rusqlite::Row<'_>) -> rusqlite::Result<Task> {
     Ok(Task {
         id: row.get(0)?,
-        workspace_id: row.get(1)?,
+        project_id: row.get(1)?,
         number: row.get(2)?,
         folder_name: row.get(3)?,
         title: row.get(4)?,
@@ -39,28 +39,27 @@ pub fn get_task_by_id(conn: &Connection, task_id: &str) -> Result<Task, StoreErr
         .ok_or(StoreError::NotFound)
 }
 
-pub fn get_task(conn: &Connection, workspace_id: &str, task_ref: &str) -> Result<Task, StoreError> {
+pub fn get_task(conn: &Connection, project_id: &str, task_ref: &str) -> Result<Task, StoreError> {
     if let Ok(number) = task_ref.parse::<i64>() {
-        let sql =
-            format!("SELECT {TASK_COLUMNS} FROM tasks WHERE workspace_id = ?1 AND number = ?2");
-        conn.query_row(&sql, params![workspace_id, number], map_task)
+        let sql = format!("SELECT {TASK_COLUMNS} FROM tasks WHERE project_id = ?1 AND number = ?2");
+        conn.query_row(&sql, params![project_id, number], map_task)
             .optional()?
             .ok_or(StoreError::NotFound)
     } else {
-        let sql = format!("SELECT {TASK_COLUMNS} FROM tasks WHERE workspace_id = ?1 AND id = ?2");
-        conn.query_row(&sql, params![workspace_id, task_ref], map_task)
+        let sql = format!("SELECT {TASK_COLUMNS} FROM tasks WHERE project_id = ?1 AND id = ?2");
+        conn.query_row(&sql, params![project_id, task_ref], map_task)
             .optional()?
             .ok_or(StoreError::NotFound)
     }
 }
 
-pub fn next_number(conn: &Connection, workspace_id: &str) -> Result<i64, StoreError> {
+pub fn next_number(conn: &Connection, project_id: &str) -> Result<i64, StoreError> {
     let number: i64 = conn.query_row(
-        "UPDATE workspace_counters
+        "UPDATE project_counters
          SET next_number = next_number + 1
-         WHERE workspace_id = ?1
+         WHERE project_id = ?1
          RETURNING next_number - 1",
-        [workspace_id],
+        [project_id],
         |row| row.get(0),
     )?;
     Ok(number)
@@ -69,7 +68,7 @@ pub fn next_number(conn: &Connection, workspace_id: &str) -> Result<i64, StoreEr
 #[allow(clippy::too_many_arguments)]
 pub fn insert_task(
     conn: &Connection,
-    workspace_id: &str,
+    project_id: &str,
     number: i64,
     folder_name: &str,
     title: &str,
@@ -83,13 +82,13 @@ pub fn insert_task(
     let now = now_rfc3339();
     conn.execute(
         "INSERT INTO tasks
-         (id, workspace_id, number, folder_name, title, statement, status_id,
+         (id, project_id, number, folder_name, title, statement, status_id,
           route, route_snapshot, resource, waiting_for, waiting_ref, waiting_since,
           created_at, updated_at, closed_at, origin)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, ?9, '', '', NULL, ?10, ?10, NULL, ?11)",
         params![
             id,
-            workspace_id,
+            project_id,
             number,
             folder_name,
             title,
@@ -104,7 +103,7 @@ pub fn insert_task(
     get_task_by_id(conn, &id)
 }
 
-pub fn list_tasks(conn: &Connection, workspace_id: &str) -> Result<Vec<TaskListItem>, StoreError> {
+pub fn list_tasks(conn: &Connection, project_id: &str) -> Result<Vec<TaskListItem>, StoreError> {
     let mut stmt = conn.prepare(
         "SELECT t.id, t.number, t.folder_name, t.title, t.status_id,
                 COALESCE(s.title, t.status_id) AS status_title,
@@ -113,12 +112,12 @@ pub fn list_tasks(conn: &Connection, workspace_id: &str) -> Result<Vec<TaskListI
                   LIMIT 1) AS current_role,
                 t.waiting_for, t.updated_at
          FROM tasks t
-         LEFT JOIN workspace_statuses s
-           ON s.workspace_id = t.workspace_id AND s.id = t.status_id
-         WHERE t.workspace_id = ?1
+         LEFT JOIN project_statuses s
+           ON s.project_id = t.project_id AND s.id = t.status_id
+         WHERE t.project_id = ?1
          ORDER BY t.number DESC",
     )?;
-    let rows = stmt.query_map([workspace_id], |row| {
+    let rows = stmt.query_map([project_id], |row| {
         Ok(TaskListItem {
             id: row.get(0)?,
             number: row.get(1)?,
@@ -178,12 +177,8 @@ pub fn set_status(conn: &Connection, task_id: &str, status_id: &str) -> Result<T
     get_task_by_id(conn, task_id)
 }
 
-pub fn close_task(
-    conn: &Connection,
-    workspace_id: &str,
-    task_id: &str,
-) -> Result<Task, StoreError> {
-    let done = status_by_kind(conn, workspace_id, "done")?;
+pub fn close_task(conn: &Connection, project_id: &str, task_id: &str) -> Result<Task, StoreError> {
+    let done = status_by_kind(conn, project_id, "done")?;
     let now = now_rfc3339();
     conn.execute(
         "UPDATE tasks
@@ -241,12 +236,8 @@ pub fn clear_waiting(
     get_task_by_id(conn, task_id)
 }
 
-pub fn reopen_task(
-    conn: &Connection,
-    workspace_id: &str,
-    task_id: &str,
-) -> Result<Task, StoreError> {
-    let active = status_by_kind(conn, workspace_id, "active")?;
+pub fn reopen_task(conn: &Connection, project_id: &str, task_id: &str) -> Result<Task, StoreError> {
+    let active = status_by_kind(conn, project_id, "active")?;
     let now = now_rfc3339();
     conn.execute(
         "UPDATE tasks
@@ -261,16 +252,16 @@ pub fn reopen_task(
 
 pub fn status_by_kind(
     conn: &Connection,
-    workspace_id: &str,
+    project_id: &str,
     kind: &str,
 ) -> Result<Status, StoreError> {
     conn.query_row(
         "SELECT id, title, kind, color, sort
-         FROM workspace_statuses
-         WHERE workspace_id = ?1 AND kind = ?2
+         FROM project_statuses
+         WHERE project_id = ?1 AND kind = ?2
          ORDER BY CASE WHEN id = ?2 THEN 0 ELSE 1 END, sort, id
          LIMIT 1",
-        params![workspace_id, kind],
+        params![project_id, kind],
         |row| {
             Ok(Status {
                 id: row.get(0)?,
@@ -287,12 +278,12 @@ pub fn status_by_kind(
 
 pub fn status_exists(
     conn: &Connection,
-    workspace_id: &str,
+    project_id: &str,
     status_id: &str,
 ) -> Result<bool, StoreError> {
     let count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM workspace_statuses WHERE workspace_id = ?1 AND id = ?2",
-        params![workspace_id, status_id],
+        "SELECT COUNT(*) FROM project_statuses WHERE project_id = ?1 AND id = ?2",
+        params![project_id, status_id],
         |row| row.get(0),
     )?;
     Ok(count > 0)
@@ -300,14 +291,14 @@ pub fn status_exists(
 
 pub fn status_by_id(
     conn: &Connection,
-    workspace_id: &str,
+    project_id: &str,
     status_id: &str,
 ) -> Result<Status, StoreError> {
     conn.query_row(
         "SELECT id, title, kind, color, sort
-         FROM workspace_statuses
-         WHERE workspace_id = ?1 AND id = ?2",
-        params![workspace_id, status_id],
+         FROM project_statuses
+         WHERE project_id = ?1 AND id = ?2",
+        params![project_id, status_id],
         |row| {
             Ok(Status {
                 id: row.get(0)?,
@@ -324,18 +315,18 @@ pub fn status_by_id(
 
 pub fn resource_busy(
     conn: &Connection,
-    workspace_id: &str,
+    project_id: &str,
     resource: &str,
     task_id: &str,
 ) -> Result<bool, StoreError> {
     let count: i64 = conn.query_row(
         "SELECT COUNT(*)
          FROM tasks t
-         JOIN workspace_statuses s
-           ON s.workspace_id = t.workspace_id AND s.id = t.status_id
-         WHERE t.workspace_id = ?1 AND t.resource = ?2
+         JOIN project_statuses s
+           ON s.project_id = t.project_id AND s.id = t.status_id
+         WHERE t.project_id = ?1 AND t.resource = ?2
            AND s.kind != 'done' AND t.id != ?3",
-        params![workspace_id, resource, task_id],
+        params![project_id, resource, task_id],
         |row| row.get(0),
     )?;
     Ok(count > 0)

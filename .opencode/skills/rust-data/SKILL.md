@@ -52,11 +52,11 @@ enum WriteCommand {
 ```rust
 let tx = conn.transaction()?;
 let number: i64 = tx.query_row(
-    "UPDATE workspace_counters
+    "UPDATE project_counters
      SET next_number = next_number + 1
-     WHERE workspace_id = ?1
+     WHERE project_id = ?1
      RETURNING next_number - 1",
-    [workspace_id],
+    [project_id],
     |row| row.get(0),
 )?;
 // ... вставка задачи ...

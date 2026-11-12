@@ -6,6 +6,7 @@ use super::error::StoreError;
 const MIGRATIONS: &[(i64, &str)] = &[
     (1, include_str!("../../migrations/0001_init.sql")),
     (2, include_str!("../../migrations/0002_fts.sql")),
+    (3, include_str!("../../migrations/0003_projects.sql")),
 ];
 
 pub fn migrate(conn: &mut Connection) -> Result<(), StoreError> {

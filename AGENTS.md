@@ -23,7 +23,7 @@
 - Сначала архитектура, потом код. Схему БД и контракты MCP менять только вместе
   с записью в `docs/`.
 - Один писатель в SQLite. Мутации — только через writer, чтение — параллельно.
-- `workspace`, `task`, `role` обязательны. Значений по умолчанию и автосоздания нет.
+- `project`, `task`, `role` обязательны. Значений по умолчанию и автосоздания нет.
 - Ошибка приложения — `{code, message, hint, allowed}`. На пользовательском вводе
   не `panic`, не `unwrap`.
 - Одна задача — один открытый этап. Отчёты не редактируются: новый круг — новый отчёт.
@@ -33,7 +33,7 @@
 ## Сборка и проверки
 
 ```text
-cargo run -- init --workspace PithosPandoras --root .
+cargo run -- init --project PithosPandoras --root .
 cargo run -- serve --db pithos-pandoras.db
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
@@ -65,7 +65,7 @@ tools/index.ps1 affected "Symbol" -Depth 3
 
 ## Страница
 
-`/` — доска, `/tasks/{number}` — карточка, `/search`, `/stats`, `/workspaces`,
+`/` — доска, `/tasks/{number}` — карточка, `/search`, `/stats`, `/projects`,
 `/settings`. Действия человека идут с подписью `человек` и роль не требуют.
 
 Задача, созданная человеком, сразу получает папку. Для задачи агента папку
@@ -74,7 +74,7 @@ tools/index.ps1 affected "Symbol" -Depth 3
 ## Импорт
 
 ```text
-cargo run -- import --workspace <имя> --path <папка> --db <база>
+cargo run -- import --project <имя> --path <папка> --db <база>
 ```
 
 Читает `Состояние.json`, `Задача.md`, `Артефакты/**`. Номера сохраняются.

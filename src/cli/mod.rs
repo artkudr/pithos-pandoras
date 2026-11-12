@@ -44,7 +44,7 @@ pub struct ServeArgs {
     #[arg(long, default_value = "pithos-pandoras.db")]
     pub db: PathBuf,
     #[arg(long, default_value = "PithosPandoras")]
-    pub workspace: String,
+    pub project: String,
     #[arg(long)]
     pub key: Option<String>,
     #[arg(long, default_value = "pithos-pandoras.key")]
@@ -57,7 +57,7 @@ impl Default for ServeArgs {
             host: String::from("127.0.0.1"),
             port: 8787,
             db: PathBuf::from("pithos-pandoras.db"),
-            workspace: String::from("PithosPandoras"),
+            project: String::from("PithosPandoras"),
             key: None,
             key_file: PathBuf::from("pithos-pandoras.key"),
         }
@@ -67,7 +67,7 @@ impl Default for ServeArgs {
 #[derive(Debug, Args)]
 pub struct InitArgs {
     #[arg(long)]
-    pub workspace: String,
+    pub project: String,
     #[arg(long, default_value = ".")]
     pub root: PathBuf,
     #[arg(long, default_value = "Задачи")]
@@ -110,13 +110,13 @@ async fn serve(args: ServeArgs) -> anyhow::Result<()> {
     let store = Arc::new(Store::open(&args.db).context("открыть базу")?);
     let service = Arc::new(Service::new(store));
 
-    if let Err(err) = service.workspace_get(Some(args.workspace.clone())).await {
-        if err.code == crate::domain::ErrorCode::WorkspaceUnknown {
-            eprintln!("Проект `{}` не найден.", args.workspace);
+    if let Err(err) = service.project_get(Some(args.project.clone())).await {
+        if err.code == crate::domain::ErrorCode::ProjectUnknown {
+            eprintln!("Проект `{}` не найден.", args.project);
             eprintln!("Создайте его:");
             eprintln!(
-                "  cargo run -- init --workspace {} --root . --db {}",
-                args.workspace,
+                "  cargo run -- init --project {} --root . --db {}",
+                args.project,
                 args.db.display()
             );
             std::process::exit(1);
@@ -126,7 +126,7 @@ async fn serve(args: ServeArgs) -> anyhow::Result<()> {
 
     let app = mcp::server::router(service.clone(), key).merge(web::pages::router(
         service,
-        args.workspace.clone(),
+        args.project.clone(),
         web::live::Live::spawn(args.db.clone()),
     ));
 
@@ -171,7 +171,7 @@ pub(crate) fn load_or_create_key(key: Option<&str>, key_file: &Path) -> anyhow::
 
 async fn import_old(args: import::ImportArgs) -> anyhow::Result<()> {
     let store = Arc::new(Store::open(&args.db).context("открыть базу")?);
-    import::run(&store, &args.workspace, &args.path).await
+    import::run(&store, &args.project, &args.path).await
 }
 
 async fn init(args: InitArgs) -> anyhow::Result<()> {
@@ -184,17 +184,17 @@ async fn init(args: InitArgs) -> anyhow::Result<()> {
         .to_string_lossy()
         .trim_start_matches("\\\\?\\")
         .to_string();
-    let workspace_name = args.workspace.clone();
+    let project_name = args.project.clone();
     let tasks_dir = args.tasks_dir.clone();
     let folder_pattern = args.folder_pattern.clone();
     let roles = args.roles.clone();
     let config = args.config.clone();
 
-    let workspace = store
+    let project = store
         .write(move |conn| {
-            store::workspaces::init_workspace(
+            store::projects::init_project(
                 conn,
-                &workspace_name,
+                &project_name,
                 &root_string,
                 &tasks_dir,
                 &folder_pattern,
@@ -205,7 +205,7 @@ async fn init(args: InitArgs) -> anyhow::Result<()> {
         .await
         .context("создать проект")?;
 
-    println!("{}", serde_json::to_string_pretty(&workspace)?);
+    println!("{}", serde_json::to_string_pretty(&project)?);
     Ok(())
 }
 
@@ -217,7 +217,7 @@ async fn doctor(args: DoctorArgs) -> anyhow::Result<()> {
         .await
         .context("версия схемы")?;
     let names = store
-        .read(store::workspaces::list_workspace_names)
+        .read(store::projects::list_project_names)
         .await
         .context("проекты")?;
     let open_stages = store
@@ -254,7 +254,7 @@ async fn doctor(args: DoctorArgs) -> anyhow::Result<()> {
     let port_free = std::net::TcpListener::bind(("127.0.0.1", 8787)).is_ok();
 
     println!("schema_version: {version}");
-    println!("workspaces: {}", names.join(", "));
+    println!("projects: {}", names.join(", "));
     println!("open_stages: {}", open_stages.len());
     for stage in open_stages {
         println!("  {} {} круг {}", stage.task_id, stage.role, stage.round);

@@ -16,8 +16,9 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::domain::{
-    AppError, Comment, ErrorCode as AppErrorCode, Event, FileAdded, FileRecord, NextStep, Report,
-    StageFinish, StageStart, Task, TaskCard, TaskCreated, TaskListItem, TaskStats, WorkspaceView,
+    AppError, Comment, ErrorCode as AppErrorCode, Event, FileAdded, FileRecord, NextStep,
+    ProjectView, Report, StageFinish, StageStart, Task, TaskCard, TaskCreated, TaskListItem,
+    TaskStats,
 };
 use crate::service::{
     FileAddRequest, FileGetRequest, ReportAddRequest, ReportGetRequest, ReportPutRequest, Service,
@@ -32,13 +33,13 @@ pub struct PithosServer {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
-pub struct WorkspaceGetArgs {
-    pub workspace: Option<String>,
+pub struct ProjectGetArgs {
+    pub project: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskCreateArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub role: Option<String>,
     pub title: Option<String>,
     pub statement: Option<String>,
@@ -48,25 +49,25 @@ pub struct TaskCreateArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskListArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskGetArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct StageStartArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub role: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct StageFinishArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub role: Option<String>,
     pub verdict: Option<String>,
@@ -76,7 +77,7 @@ pub struct StageFinishArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReportAddArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub role: Option<String>,
     pub kind: Option<String>,
@@ -86,14 +87,14 @@ pub struct ReportAddArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReportGetArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub report: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReportPutArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub role: Option<String>,
     pub kind: Option<String>,
@@ -103,14 +104,14 @@ pub struct ReportPutArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskCloseArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub role: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskBlockArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub role: Option<String>,
     pub reason: Option<String>,
@@ -120,7 +121,7 @@ pub struct TaskBlockArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskResumeArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub role: Option<String>,
     pub reason: Option<String>,
@@ -128,7 +129,7 @@ pub struct TaskResumeArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskReopenArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub role: Option<String>,
     pub reason: Option<String>,
@@ -136,7 +137,7 @@ pub struct TaskReopenArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskNoteArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub role: Option<String>,
     pub text: Option<String>,
@@ -144,13 +145,13 @@ pub struct TaskNoteArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskTimelineArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskUpdateArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub role: Option<String>,
     pub title: Option<String>,
@@ -159,7 +160,7 @@ pub struct TaskUpdateArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskSetStatusArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub role: Option<String>,
     pub status: Option<String>,
@@ -167,24 +168,24 @@ pub struct TaskSetStatusArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskNextArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskStatsArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskSearchArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub query: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct FileAddArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub role: Option<String>,
     pub path: Option<String>,
@@ -194,7 +195,7 @@ pub struct FileAddArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct FileGetArgs {
-    pub workspace: Option<String>,
+    pub project: Option<String>,
     pub task: Option<String>,
     pub file: Option<String>,
 }
@@ -209,15 +210,15 @@ impl PithosServer {
     }
 
     #[tool(
-        name = "workspace_get",
+        name = "project_get",
         description = "Настройки проекта: роли, статусы, config"
     )]
-    pub async fn workspace_get(
+    pub async fn project_get(
         &self,
-        Parameters(args): Parameters<WorkspaceGetArgs>,
-    ) -> Result<Json<WorkspaceView>, ErrorData> {
+        Parameters(args): Parameters<ProjectGetArgs>,
+    ) -> Result<Json<ProjectView>, ErrorData> {
         self.service
-            .workspace_get(args.workspace)
+            .project_get(args.project)
             .await
             .map(Json)
             .map_err(Into::into)
@@ -233,7 +234,7 @@ impl PithosServer {
     ) -> Result<Json<TaskCreated>, ErrorData> {
         self.service
             .task_create(TaskCreateRequest {
-                workspace: args.workspace,
+                project: args.project,
                 role: args.role,
                 title: args.title,
                 statement: args.statement,
@@ -251,7 +252,7 @@ impl PithosServer {
         Parameters(args): Parameters<TaskListArgs>,
     ) -> Result<Json<Vec<TaskListItem>>, ErrorData> {
         self.service
-            .task_list(args.workspace)
+            .task_list(args.project)
             .await
             .map(Json)
             .map_err(Into::into)
@@ -266,7 +267,7 @@ impl PithosServer {
         Parameters(args): Parameters<TaskGetArgs>,
     ) -> Result<Json<TaskCard>, ErrorData> {
         self.service
-            .task_get(args.workspace, args.task)
+            .task_get(args.project, args.task)
             .await
             .map(Json)
             .map_err(Into::into)
@@ -282,7 +283,7 @@ impl PithosServer {
     ) -> Result<Json<StageStart>, ErrorData> {
         self.service
             .stage_start(StageStartRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 role: args.role,
             })
@@ -301,7 +302,7 @@ impl PithosServer {
     ) -> Result<Json<StageFinish>, ErrorData> {
         self.service
             .stage_finish(StageFinishRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 role: args.role,
                 verdict: args.verdict,
@@ -323,7 +324,7 @@ impl PithosServer {
     ) -> Result<Json<Report>, ErrorData> {
         self.service
             .report_add(ReportAddRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 role: args.role,
                 kind: args.kind,
@@ -342,7 +343,7 @@ impl PithosServer {
     ) -> Result<Json<Report>, ErrorData> {
         self.service
             .report_get(ReportGetRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 report: args.report,
             })
@@ -361,7 +362,7 @@ impl PithosServer {
     ) -> Result<Json<Report>, ErrorData> {
         self.service
             .report_put(ReportPutRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 role: args.role,
                 kind: args.kind,
@@ -380,7 +381,7 @@ impl PithosServer {
     ) -> Result<Json<Task>, ErrorData> {
         self.service
             .task_close(TaskCloseRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 role: args.role,
             })
@@ -399,7 +400,7 @@ impl PithosServer {
     ) -> Result<Json<Task>, ErrorData> {
         self.service
             .task_block(TaskBlockRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 role: args.role,
                 reason: args.reason,
@@ -418,7 +419,7 @@ impl PithosServer {
     ) -> Result<Json<Task>, ErrorData> {
         self.service
             .task_resume(TaskResumeRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 role: args.role,
                 reason: args.reason,
@@ -435,7 +436,7 @@ impl PithosServer {
     ) -> Result<Json<Task>, ErrorData> {
         self.service
             .task_reopen(TaskReopenRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 role: args.role,
                 reason: args.reason,
@@ -452,7 +453,7 @@ impl PithosServer {
     ) -> Result<Json<Comment>, ErrorData> {
         self.service
             .task_note(TaskNoteRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 role: args.role,
                 text: args.text,
@@ -468,7 +469,7 @@ impl PithosServer {
         Parameters(args): Parameters<TaskTimelineArgs>,
     ) -> Result<Json<Vec<Event>>, ErrorData> {
         self.service
-            .task_timeline(args.workspace, args.task)
+            .task_timeline(args.project, args.task)
             .await
             .map(Json)
             .map_err(Into::into)
@@ -484,7 +485,7 @@ impl PithosServer {
     ) -> Result<Json<Task>, ErrorData> {
         self.service
             .task_update(TaskUpdateRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 role: args.role,
                 title: args.title,
@@ -502,7 +503,7 @@ impl PithosServer {
     ) -> Result<Json<Task>, ErrorData> {
         self.service
             .task_set_status(TaskSetStatusRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 role: args.role,
                 status: args.status,
@@ -518,7 +519,7 @@ impl PithosServer {
         Parameters(args): Parameters<TaskNextArgs>,
     ) -> Result<Json<NextStep>, ErrorData> {
         self.service
-            .task_next(args.workspace, args.task)
+            .task_next(args.project, args.task)
             .await
             .map(Json)
             .map_err(Into::into)
@@ -530,7 +531,7 @@ impl PithosServer {
         Parameters(args): Parameters<TaskStatsArgs>,
     ) -> Result<Json<TaskStats>, ErrorData> {
         self.service
-            .task_stats(args.workspace)
+            .task_stats(args.project)
             .await
             .map(Json)
             .map_err(Into::into)
@@ -542,7 +543,7 @@ impl PithosServer {
         Parameters(args): Parameters<TaskSearchArgs>,
     ) -> Result<Json<Vec<TaskListItem>>, ErrorData> {
         self.service
-            .task_search(args.workspace, args.query)
+            .task_search(args.project, args.query)
             .await
             .map(Json)
             .map_err(Into::into)
@@ -555,7 +556,7 @@ impl PithosServer {
     ) -> Result<Json<FileAdded>, ErrorData> {
         self.service
             .file_add(FileAddRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 role: args.role,
                 path: args.path,
@@ -574,7 +575,7 @@ impl PithosServer {
     ) -> Result<Json<FileRecord>, ErrorData> {
         self.service
             .file_get(FileGetRequest {
-                workspace: args.workspace,
+                project: args.project,
                 task: args.task,
                 file: args.file,
             })
@@ -590,13 +591,13 @@ impl ServerHandler for PithosServer {}
 impl From<AppError> for ErrorData {
     fn from(err: AppError) -> Self {
         let code = match err.code {
-            AppErrorCode::WorkspaceMissing
+            AppErrorCode::ProjectMissing
             | AppErrorCode::RoleMissing
             | AppErrorCode::TaskMissing
             | AppErrorCode::FieldMissing
             | AppErrorCode::InputMissing
             | AppErrorCode::Conflict => McpErrorCode::INVALID_PARAMS,
-            AppErrorCode::WorkspaceUnknown
+            AppErrorCode::ProjectUnknown
             | AppErrorCode::RoleUnknown
             | AppErrorCode::TaskUnknown
             | AppErrorCode::NotFound => McpErrorCode::RESOURCE_NOT_FOUND,

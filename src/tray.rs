@@ -128,8 +128,8 @@ pub fn run() -> anyhow::Result<()> {
     init_logging();
 
     let db = std::env::var("PITHOS_DB").unwrap_or_else(|_| String::from("pithos-pandoras.db"));
-    let workspace =
-        std::env::var("PITHOS_WORKSPACE").unwrap_or_else(|_| String::from("PithosPandoras"));
+    let project =
+        std::env::var("PITHOS_PROJECT").unwrap_or_else(|_| String::from("PithosPandoras"));
     let key_file =
         std::env::var("PITHOS_KEY_FILE").unwrap_or_else(|_| String::from("pithos-pandoras.key"));
     let port: u16 = std::env::var("PITHOS_PORT")
@@ -151,13 +151,13 @@ pub fn run() -> anyhow::Result<()> {
             runtime.block_on(async move {
                 let store = Arc::new(Store::open(Path::new(&db)).context("открыть базу")?);
                 let service = Arc::new(Service::new(store));
-                if let Err(err) = service.workspace_get(Some(workspace.clone())).await {
+                if let Err(err) = service.project_get(Some(project.clone())).await {
                     tracing::error!(%err, "проект не найден");
                     return Err(err.into());
                 }
                 let app = mcp::server::router(service.clone(), key).merge(web::pages::router(
                     service,
-                    workspace,
+                    project,
                     web::live::Live::spawn(PathBuf::from(&db)),
                 ));
                 let listener = tokio::net::TcpListener::bind(("127.0.0.1", port)).await?;

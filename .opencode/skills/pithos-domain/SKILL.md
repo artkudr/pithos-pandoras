@@ -80,8 +80,8 @@ description: >-
 
 | Код | Когда |
 |---|---|
-| `workspace_missing` | не передан проект |
-| `workspace_unknown` | проекта нет; в `allowed` — доступные |
+| `project_missing` | не передан проект |
+| `project_unknown` | проекта нет; в `allowed` — доступные |
 | `role_missing` | не передана роль |
 | `role_unknown` | роли нет; в `allowed` — зарегистрированные |
 | `task_missing` | не передана задача |

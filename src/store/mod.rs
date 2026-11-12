@@ -6,11 +6,11 @@ pub mod error;
 pub mod events;
 pub mod files;
 pub mod migrations;
+pub mod projects;
 pub mod read;
 pub mod reports;
 pub mod stages;
 pub mod tasks;
-pub mod workspaces;
 pub mod writer;
 
 use std::path::{Path, PathBuf};

@@ -6,7 +6,7 @@ use crate::domain::{FileRecord, ReportPreview, Stage, Status};
 #[derive(Debug, Clone, Serialize, JsonSchema)]
 pub struct Task {
     pub id: String,
-    pub workspace_id: String,
+    pub project_id: String,
     pub number: i64,
     pub folder_name: String,
     pub title: String,

@@ -6,13 +6,13 @@ use anyhow::Context;
 use clap::Args;
 use serde::Deserialize;
 
-use crate::store::{db, events, files, reports, tasks, workspaces, Store};
+use crate::store::{db, events, files, projects, reports, tasks, Store};
 
 #[derive(Debug, Args)]
 pub struct ImportArgs {
     /// Проект, в который импортируем
     #[arg(long)]
-    pub workspace: String,
+    pub project: String,
     /// Папка со старыми задачами
     #[arg(long)]
     pub path: PathBuf,
@@ -45,15 +45,15 @@ struct Artifact {
     size: Option<i64>,
 }
 
-pub async fn run(store: &Store, workspace: &str, path: &Path) -> anyhow::Result<()> {
+pub async fn run(store: &Store, project: &str, path: &Path) -> anyhow::Result<()> {
     let view = store
         .read({
-            let workspace = workspace.to_string();
-            move |conn| workspaces::workspace_view(conn, &workspace)
+            let project = project.to_string();
+            move |conn| projects::project_view(conn, &project)
         })
         .await
         .context("проект")?;
-    let workspace_id = view.workspace.id;
+    let project_id = view.project.id;
 
     let mut imported = 0_u32;
     let mut skipped = 0_u32;
@@ -118,7 +118,7 @@ pub async fn run(store: &Store, workspace: &str, path: &Path) -> anyhow::Result<
 
         let result = store
             .write({
-                let workspace_id = workspace_id.clone();
+                let project_id = project_id.clone();
                 let folder_name = folder_name.clone();
                 let title = title.clone();
                 let statement = statement.clone();
@@ -128,16 +128,16 @@ pub async fn run(store: &Store, workspace: &str, path: &Path) -> anyhow::Result<
                 let created_at = created_at.clone();
                 let updated_at = updated_at.clone();
                 move |conn| {
-                    if tasks::get_task(conn, &workspace_id, &number.to_string()).is_ok() {
+                    if tasks::get_task(conn, &project_id, &number.to_string()).is_ok() {
                         return Ok(None);
                     }
 
                     let tx = conn.transaction()?;
-                    let status = tasks::status_by_id(&tx, &workspace_id, &status_id)
-                        .or_else(|_| tasks::status_by_kind(&tx, &workspace_id, &status_kind))?;
+                    let status = tasks::status_by_id(&tx, &project_id, &status_id)
+                        .or_else(|_| tasks::status_by_kind(&tx, &project_id, &status_kind))?;
                     let task = tasks::insert_task(
                         &tx,
-                        &workspace_id,
+                        &project_id,
                         number,
                         &folder_name,
                         &title,
@@ -149,10 +149,10 @@ pub async fn run(store: &Store, workspace: &str, path: &Path) -> anyhow::Result<
                     )?;
                     tasks::set_timestamps(&tx, &task.id, &created_at, &updated_at)?;
                     tx.execute(
-                        "UPDATE workspace_counters
+                        "UPDATE project_counters
                          SET next_number = MAX(next_number, ?2)
-                         WHERE workspace_id = ?1",
-                        rusqlite::params![workspace_id, number + 1],
+                         WHERE project_id = ?1",
+                        rusqlite::params![project_id, number + 1],
                     )?;
                     events::insert_event(
                         &tx,

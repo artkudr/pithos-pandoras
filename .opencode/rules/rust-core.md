@@ -26,7 +26,7 @@
 
 - Вход — `&str`, `&[T]`, `&Path`; хранение — `String`, `Vec<T>`, `PathBuf`.
 - `Clone` только осознанно. Для разделяемого состояния — `Arc`.
-- `newtype` для `WorkspaceName`, `RoleName`, `TaskId`: строки не должны
+- `newtype` для `ProjectName`, `RoleName`, `TaskId`: строки не должны
   путаться между собой.
 - `unsafe` запрещён без отдельного решения и записи в `docs/`.
 

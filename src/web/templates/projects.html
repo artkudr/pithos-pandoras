@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Проекты — {{ workspace }}{% endblock %}
+{% block title %}Проекты — {{ project }}{% endblock %}
 
 {% block content %}
 <h1>Проекты</h1>
@@ -16,7 +16,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for item in workspaces %}
+      {% for item in projects %}
         <tr{% if item.name == selected %} class="is-current"{% endif %}>
           <td class="mark-col">
             {% if item.name == selected %}
@@ -28,7 +28,7 @@
             {% if item.name == selected %}
               {{ item.name }}
             {% else %}
-              <form class="inline-form" method="post" action="/workspaces/select">
+              <form class="inline-form" method="post" action="/projects/select">
                 <input type="hidden" name="name" value="{{ item.name }}">
                 <button type="submit" class="link-button" aria-label="Выбрать проект {{ item.name }}">{{ item.name }}</button>
               </form>
@@ -53,7 +53,7 @@
 <section class="card spaced">
   <details>
     <summary>Новый проект</summary>
-    <form class="form" method="post" action="/workspaces/create">
+    <form class="form" method="post" action="/projects/create">
       <label>Название
         <input name="name" required>
       </label>

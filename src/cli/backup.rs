@@ -29,16 +29,16 @@ pub async fn run(args: BackupArgs) -> anyhow::Result<()> {
     println!("Копия: {}", path.display());
     println!("Размер: {}", human_size(size));
 
-    let workspaces = store
-        .read(store::workspaces::list_workspaces)
+    let projects = store
+        .read(store::projects::list_projects)
         .await
         .context("проекты")?;
-    if workspaces.is_empty() {
+    if projects.is_empty() {
         println!("Проектов нет.");
     } else {
         println!("Файлы задач в копию не входят, скопируйте папки отдельно:");
-        for workspace in workspaces {
-            println!("  {} — {}", workspace.name, workspace.root_path);
+        for project in projects {
+            println!("  {} — {}", project.name, project.root_path);
         }
     }
     Ok(())

@@ -17,10 +17,10 @@ description: >-
 ```rust
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
-    #[error("workspace не указан")]
-    WorkspaceMissing,
-    #[error("workspace `{0}` не найден")]
-    WorkspaceUnknown(String),
+    #[error("project не указан")]
+    ProjectMissing,
+    #[error("project `{0}` не найден")]
+    ProjectUnknown(String),
     #[error("роль `{0}` не зарегистрирована")]
     RoleUnknown(String),
     #[error("io: {0}")]

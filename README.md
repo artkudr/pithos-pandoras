@@ -20,7 +20,7 @@
 ```text
 tools/setup-dev.ps1
 
-cargo run -- init --workspace PithosPandoras --root . --db pithos-pandoras.db
+cargo run -- init --project PithosPandoras --root . --db pithos-pandoras.db
 cargo run -- serve --db pithos-pandoras.db
 cargo run -- doctor --db pithos-pandoras.db
 cargo run -- backup --db pithos-pandoras.db
@@ -56,7 +56,7 @@ tools/install-tray.ps1
 ```
 
 Скрипт создаёт ярлык в Startup с рабочим каталогом проекта, чтобы база и ключ
-нашлись. Пути можно переопределить переменными `PITHOS_DB`, `PITHOS_WORKSPACE`,
+нашлись. Пути можно переопределить переменными `PITHOS_DB`, `PITHOS_PROJECT`,
 `PITHOS_PORT`, `PITHOS_KEY_FILE`.
 
 ## Индекс

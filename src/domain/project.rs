@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]
-pub struct Workspace {
+pub struct Project {
     pub id: String,
     pub name: String,
     pub root_path: String,
@@ -29,8 +29,8 @@ pub struct Status {
 }
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]
-pub struct WorkspaceView {
-    pub workspace: Workspace,
+pub struct ProjectView {
+    pub project: Project,
     pub roles: Vec<Role>,
     pub statuses: Vec<Status>,
 }
