@@ -22,7 +22,10 @@ if (-not (Test-Tool 'rustup')) { $missing += 'rustup: https://rustup.rs' }
 if (-not (Test-Tool 'cargo')) { $missing += 'Rust + Visual Studio Build Tools с C++: https://rustup.rs' }
 if (-not (Test-Tool 'uv')) { $missing += 'uv: winget install astral-sh.uv' }
 if (-not (Test-Tool 'graphify')) { $missing += 'graphify: uv tool install graphifyy' }
-if (-not (Test-Tool 'git')) { $missing += 'Git (по желанию): winget install Git.Git' }
+if (-not (Test-Tool 'git')) { $missing += 'Git: winget install Git.Git' }
+if (-not (Test-Tool 'cargo-deny')) { $missing += 'cargo-deny: cargo install cargo-deny --locked' }
+if (-not (Test-Tool 'rg')) { $missing += 'ripgrep: winget install BurntSushi.ripgrep.MSVC' }
+if (-not (Test-Tool 'rust-analyzer')) { $missing += 'rust-analyzer: rustup component add rust-analyzer' }
 
 if ($InstallGraphify -and -not (Get-Command graphify -ErrorAction SilentlyContinue)) {
     if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { throw 'Сначала установите uv.' }
