@@ -33,7 +33,8 @@
 ## Сборка и проверки
 
 ```text
-cargo run
+cargo run -- init --workspace PithosPandoras --root .
+cargo run -- serve --db pithos-pandoras.db
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-features

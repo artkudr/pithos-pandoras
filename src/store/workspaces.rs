@@ -1,0 +1,165 @@
+use rusqlite::{params, Connection, OptionalExtension};
+use uuid::Uuid;
+
+use crate::domain::{Role, Status, Workspace, WorkspaceView};
+
+use super::db::now_rfc3339;
+use super::error::StoreError;
+
+const WORKSPACE_COLUMNS: &str =
+    "id, name, root_path, tasks_dir, folder_pattern, config_json, created_at";
+
+fn map_workspace(row: &rusqlite::Row<'_>) -> rusqlite::Result<Workspace> {
+    Ok(Workspace {
+        id: row.get(0)?,
+        name: row.get(1)?,
+        root_path: row.get(2)?,
+        tasks_dir: row.get(3)?,
+        folder_pattern: row.get(4)?,
+        config_json: row.get(5)?,
+        created_at: row.get(6)?,
+    })
+}
+
+pub fn get_workspace(conn: &Connection, name: &str) -> Result<Workspace, StoreError> {
+    let sql =
+        format!("SELECT {WORKSPACE_COLUMNS} FROM workspaces WHERE name = ?1 AND archived = 0");
+    conn.query_row(&sql, [name], map_workspace)
+        .optional()?
+        .ok_or(StoreError::NotFound)
+}
+
+pub fn list_workspace_names(conn: &Connection) -> Result<Vec<String>, StoreError> {
+    let mut stmt = conn.prepare("SELECT name FROM workspaces WHERE archived = 0 ORDER BY name")?;
+    let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row?);
+    }
+    Ok(out)
+}
+
+pub fn list_roles(conn: &Connection, workspace_id: &str) -> Result<Vec<Role>, StoreError> {
+    let mut stmt = conn.prepare(
+        "SELECT name, color, sort FROM workspace_roles
+         WHERE workspace_id = ?1 ORDER BY sort, name",
+    )?;
+    let rows = stmt.query_map([workspace_id], |row| {
+        Ok(Role {
+            name: row.get(0)?,
+            color: row.get(1)?,
+            sort: row.get(2)?,
+        })
+    })?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row?);
+    }
+    Ok(out)
+}
+
+pub fn list_statuses(conn: &Connection, workspace_id: &str) -> Result<Vec<Status>, StoreError> {
+    let mut stmt = conn.prepare(
+        "SELECT id, title, kind, color, sort FROM workspace_statuses
+         WHERE workspace_id = ?1 ORDER BY sort, id",
+    )?;
+    let rows = stmt.query_map([workspace_id], |row| {
+        Ok(Status {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            kind: row.get(2)?,
+            color: row.get(3)?,
+            sort: row.get(4)?,
+        })
+    })?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row?);
+    }
+    Ok(out)
+}
+
+pub fn workspace_view(conn: &Connection, name: &str) -> Result<WorkspaceView, StoreError> {
+    let workspace = get_workspace(conn, name)?;
+    let roles = list_roles(conn, &workspace.id)?;
+    let statuses = list_statuses(conn, &workspace.id)?;
+    Ok(WorkspaceView {
+        workspace,
+        roles,
+        statuses,
+    })
+}
+
+pub fn init_workspace(
+    conn: &mut Connection,
+    name: &str,
+    root_path: &str,
+    tasks_dir: &str,
+    folder_pattern: &str,
+    roles: &[String],
+    config_json: &str,
+) -> Result<Workspace, StoreError> {
+    let now = now_rfc3339();
+    let tx = conn.transaction()?;
+
+    let existing: Option<String> = tx
+        .query_row("SELECT id FROM workspaces WHERE name = ?1", [name], |row| {
+            row.get(0)
+        })
+        .optional()?;
+
+    let workspace_id = match existing {
+        Some(id) => id,
+        None => {
+            let id = Uuid::now_v7().to_string();
+            tx.execute(
+                "INSERT INTO workspaces
+                 (id, name, root_path, tasks_dir, folder_pattern, config_json, created_at, archived)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0)",
+                params![
+                    id,
+                    name,
+                    root_path,
+                    tasks_dir,
+                    folder_pattern,
+                    config_json,
+                    now
+                ],
+            )?;
+            id
+        }
+    };
+
+    tx.execute(
+        "INSERT OR IGNORE INTO workspace_counters(workspace_id, next_number) VALUES (?1, 1)",
+        [&workspace_id],
+    )?;
+
+    let statuses = [
+        ("new", "Новая", "active", 10_i64),
+        ("active", "В работе", "active", 20),
+        ("waiting", "Ожидание", "waiting", 30),
+        ("blocked", "Остановлена", "blocked", 40),
+        ("done", "Закрыта", "done", 50),
+    ];
+    for (id, title, kind, sort) in statuses {
+        tx.execute(
+            "INSERT OR IGNORE INTO workspace_statuses
+             (workspace_id, id, title, kind, color, sort)
+             VALUES (?1, ?2, ?3, ?4, NULL, ?5)",
+            params![workspace_id, id, title, kind, sort],
+        )?;
+    }
+
+    for (index, role) in roles.iter().enumerate() {
+        tx.execute(
+            "INSERT OR IGNORE INTO workspace_roles
+             (workspace_id, name, color, sort)
+             VALUES (?1, ?2, NULL, ?3)",
+            params![workspace_id, role, index as i64],
+        )?;
+    }
+
+    tx.commit()?;
+    get_workspace(conn, name)
+}

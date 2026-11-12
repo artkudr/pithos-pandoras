@@ -18,10 +18,19 @@
 Команды выполняются в PowerShell 7 (`pwsh`).
 
 ```text
-tools/setup-dev.ps1      # проверить окружение
-cargo run
-tools/check.ps1          # форматирование, clippy, тесты
+tools/setup-dev.ps1
+
+cargo run -- init --workspace PithosPandoras --root . --db pithos-pandoras.db
+cargo run -- serve --db pithos-pandoras.db
+cargo run -- doctor --db pithos-pandoras.db
+
+tools/check.ps1          # форматирование, clippy, тесты, cargo deny
 ```
+
+Сервер для агентов: `http://127.0.0.1:8787/mcp`.
+
+Сейчас реализован M1: схема, writer, домен, сервис и MCP-инструменты.
+Страницы, FTS5 и импорт — следующие этапы.
 
 Зависимости уже добавлены. Если понадобится повторить набор на чистом каркасе —
 `tools/add-deps.ps1`.
