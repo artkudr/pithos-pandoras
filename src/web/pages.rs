@@ -80,21 +80,11 @@ async fn live_events(State(state): State<AppState>) -> impl IntoResponse {
 async fn board(State(state): State<AppState>) -> Result<Html<String>, WebError> {
     let project = state.current_project().await;
     let tasks = state.service.task_list(Some(project.clone())).await?;
-    let stats = state.service.task_stats(Some(project.clone())).await?;
 
     let template = BoardTemplate {
         project,
         current: "board",
         tasks: tasks.into_iter().map(board_task_view).collect(),
-        counts: stats
-            .by_status
-            .into_iter()
-            .map(|count| StatusCountView {
-                color: status_color(&count.status_id, None),
-                title: count.title,
-                count: count.count,
-            })
-            .collect(),
     };
 
     render(template)
@@ -130,6 +120,11 @@ async fn task_page(
         .task_page(Some(project.clone()), Some(number.to_string()))
         .await?;
     let view = state.service.project_get(Some(project.clone())).await?;
+    let role_colors: std::collections::HashMap<String, String> = view
+        .roles
+        .iter()
+        .filter_map(|role| role.color.clone().map(|color| (role.name.clone(), color)))
+        .collect();
     let statuses = view
         .statuses
         .into_iter()
@@ -175,6 +170,7 @@ async fn task_page(
         statuses,
         folder_missing,
         current_stage: data.current_stage.map(|stage| StageView {
+            role_color: role_colors.get(&stage.role).cloned().unwrap_or_default(),
             role: stage.role,
             round: stage.round,
             started_at: format_local_time(&stage.started_at),
@@ -184,6 +180,7 @@ async fn task_page(
             .into_iter()
             .map(|item| ReportView {
                 label: report_kind_label(&item.report.kind).to_string(),
+                role_color: role_colors.get(&item.role).cloned().unwrap_or_default(),
                 title: item.report.title,
                 role: item.role,
                 created_at: format_local_time(&item.report.created_at),
@@ -527,7 +524,14 @@ async fn settings(
         tasks_dir: view.project.tasks_dir,
         folder_pattern: view.project.folder_pattern,
         config_json: view.project.config_json,
-        roles: view.roles.into_iter().map(|role| role.name).collect(),
+        roles: view
+            .roles
+            .into_iter()
+            .map(|role| SettingsRoleView {
+                name: role.name,
+                color: role.color.unwrap_or_default(),
+            })
+            .collect(),
         statuses: view
             .statuses
             .into_iter()
@@ -582,13 +586,7 @@ async fn create_project(
     State(state): State<AppState>,
     Form(form): Form<ProjectCreateForm>,
 ) -> Result<Redirect, WebError> {
-    let roles: Vec<String> = form
-        .roles
-        .split(',')
-        .map(str::trim)
-        .filter(|role| !role.is_empty())
-        .map(str::to_string)
-        .collect();
+    let roles = project_roles_from_form(form.roles_json.as_deref(), form.roles.as_deref());
     let created = state
         .service
         .create_project(
@@ -602,6 +600,34 @@ async fn create_project(
         .await?;
     *state.project.write().await = created.name.clone();
     Ok(Redirect::to("/"))
+}
+
+/// Роли из формы: `roles_json` (редактор таблицей), иначе старый список через запятую.
+fn project_roles_from_form(
+    roles_json: Option<&str>,
+    roles: Option<&str>,
+) -> Vec<(String, Option<String>)> {
+    if let Some(json) = roles_json {
+        #[derive(Deserialize)]
+        struct RoleInput {
+            name: String,
+            color: Option<String>,
+        }
+        if let Ok(items) = serde_json::from_str::<Vec<RoleInput>>(json) {
+            return items
+                .into_iter()
+                .map(|item| (item.name.trim().to_string(), item.color))
+                .filter(|(name, _)| !name.is_empty())
+                .collect();
+        }
+    }
+    roles
+        .unwrap_or_default()
+        .split(',')
+        .map(str::trim)
+        .filter(|role| !role.is_empty())
+        .map(|role| (role.to_string(), None))
+        .collect()
 }
 
 async fn select_project(
@@ -618,7 +644,10 @@ async fn add_role(
     Form(form): Form<RoleForm>,
 ) -> Result<Redirect, WebError> {
     let project = state.current_project().await;
-    state.service.add_role(&project, &form.name).await?;
+    state
+        .service
+        .add_role(&project, &form.name, form.color.as_deref())
+        .await?;
     Ok(Redirect::to("/settings?saved=roles"))
 }
 
@@ -710,6 +739,7 @@ fn board_task_view(task: TaskListItem) -> BoardTaskView {
         status: task.status_title,
         status_color: status_color(&task.status_id, None),
         current_role: task.current_role.unwrap_or_else(|| String::from("—")),
+        current_role_color: task.current_role_color.unwrap_or_default(),
         waiting_for: if task.waiting_for.is_empty() {
             String::from("—")
         } else {
@@ -936,7 +966,8 @@ struct ProjectCreateForm {
     root_path: String,
     tasks_dir: String,
     folder_pattern: String,
-    roles: String,
+    roles: Option<String>,
+    roles_json: Option<String>,
     config_json: String,
 }
 
@@ -948,6 +979,7 @@ struct ProjectSelectForm {
 #[derive(Deserialize)]
 struct RoleForm {
     name: String,
+    color: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -976,7 +1008,6 @@ struct BoardTemplate {
     project: String,
     current: &'static str,
     tasks: Vec<BoardTaskView>,
-    counts: Vec<StatusCountView>,
 }
 
 #[derive(Template)]
@@ -1024,8 +1055,13 @@ struct SettingsTemplate {
     tasks_dir: String,
     folder_pattern: String,
     config_json: String,
-    roles: Vec<String>,
+    roles: Vec<SettingsRoleView>,
     statuses: Vec<SettingsStatusView>,
+}
+
+struct SettingsRoleView {
+    name: String,
+    color: String,
 }
 
 #[derive(Template)]
@@ -1064,6 +1100,7 @@ struct BoardTaskView {
     status: String,
     status_color: String,
     current_role: String,
+    current_role_color: String,
     waiting_for: String,
     updated_at: String,
 }
@@ -1094,6 +1131,7 @@ struct TaskView {
 
 struct StageView {
     role: String,
+    role_color: String,
     round: i64,
     started_at: String,
 }
@@ -1102,6 +1140,7 @@ struct ReportView {
     label: String,
     title: String,
     role: String,
+    role_color: String,
     created_at: String,
     html: String,
 }

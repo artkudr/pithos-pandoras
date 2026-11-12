@@ -110,6 +110,11 @@ pub fn list_tasks(conn: &Connection, project_id: &str) -> Result<Vec<TaskListIte
                 (SELECT st.role FROM stages st
                   WHERE st.task_id = t.id AND st.finished_at IS NULL
                   LIMIT 1) AS current_role,
+                (SELECT r.color FROM stages st
+                  JOIN project_roles r
+                    ON r.project_id = t.project_id AND r.name = st.role
+                  WHERE st.task_id = t.id AND st.finished_at IS NULL
+                  LIMIT 1) AS current_role_color,
                 t.waiting_for, t.updated_at
          FROM tasks t
          LEFT JOIN project_statuses s
@@ -126,8 +131,9 @@ pub fn list_tasks(conn: &Connection, project_id: &str) -> Result<Vec<TaskListIte
             status_id: row.get(4)?,
             status_title: row.get(5)?,
             current_role: row.get(6)?,
-            waiting_for: row.get(7)?,
-            updated_at: row.get(8)?,
+            current_role_color: row.get(7)?,
+            waiting_for: row.get(8)?,
+            updated_at: row.get(9)?,
         })
     })?;
     let mut out = Vec::new();

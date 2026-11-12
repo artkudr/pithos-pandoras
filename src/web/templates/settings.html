@@ -37,16 +37,20 @@
         <tr>
           <th class="add-col">
             <button type="button" class="add-button" data-toggle="create-role" aria-expanded="false" aria-controls="create-role" title="Добавить роль" aria-label="Добавить роль">+</button>
-            <span class="sr-only">Роль</span>
+            <span class="sr-only">Действие</span>
           </th>
+          <th>Роль</th>
         </tr>
       </thead>
       <tbody>
         <tr class="create-row" id="create-role" hidden>
-          <td>
+          <td colspan="2">
             <form class="form" method="post" action="/settings/roles">
               <label>Новая роль
                 <input name="name" required>
+              </label>
+              <label>Цвет роли
+                <input type="color" name="color" value="#5c7cfa">
               </label>
               <div class="form-actions">
                 <button type="submit">Добавить роль</button>
@@ -57,11 +61,37 @@
         </tr>
         {% if roles.is_empty() %}
           <tr>
-            <td class="muted">Ролей нет. Нажмите «+», чтобы добавить первую.</td>
+            <td colspan="2" class="muted">Ролей нет. Нажмите «+», чтобы добавить первую.</td>
           </tr>
         {% else %}
           {% for role in roles %}
-            <tr><td>{{ role }}</td></tr>
+            <tr>
+              <td class="edit-col">
+                <button type="button" class="row-edit" data-toggle="edit-role-{{ loop.index }}" aria-expanded="false" aria-controls="edit-role-{{ loop.index }}" title="Изменить роль" aria-label="Изменить роль {{ role.name }}">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                </button>
+              </td>
+              <td>
+                {% if !role.color.is_empty() %}<span style="color: {{ role.color }}">{{ role.name }}</span>{% else %}{{ role.name }}{% endif %}
+              </td>
+            </tr>
+            <tr class="create-row" id="edit-role-{{ loop.index }}" hidden>
+              <td colspan="2">
+                <form class="form" method="post" action="/settings/roles">
+                  <input type="hidden" name="name" value="{{ role.name }}">
+                  <label>Цвет роли «{{ role.name }}»
+                    <input type="color" name="color" value="{% if role.color.is_empty() %}#5c7cfa{% else %}{{ role.color }}{% endif %}">
+                  </label>
+                  <div class="form-actions">
+                    <button type="submit">Сохранить цвет</button>
+                    <button type="button" class="ghost" data-toggle="edit-role-{{ loop.index }}">Отменить</button>
+                  </div>
+                </form>
+              </td>
+            </tr>
           {% endfor %}
         {% endif %}
       </tbody>

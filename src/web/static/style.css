@@ -83,7 +83,8 @@ a:hover {
 
 .project {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .project:hover {
@@ -211,7 +212,7 @@ h3 {
   width: 26px;
   height: 26px;
   padding: 0;
-  border: 1px solid var(--field-line);
+  border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--accent);
@@ -221,7 +222,6 @@ h3 {
 
 .add-button:hover,
 .add-button[aria-expanded="true"] {
-  border-color: var(--accent);
   background: var(--accent-soft);
 }
 
@@ -253,6 +253,72 @@ h3 {
 .ghost:hover {
   border-color: var(--line);
   color: var(--text);
+}
+
+.create-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.field-label {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.roles-editor {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.roles-editor th {
+  padding: 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: left;
+}
+
+.roles-editor td {
+  padding: 3px 8px;
+}
+
+.roles-editor input[type="color"] {
+  width: 44px;
+  padding: 2px;
+}
+
+.edit-col {
+  width: 34px;
+  padding-left: 0;
+  text-align: center;
+}
+
+.row-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0;
+}
+
+.board tbody tr:hover .row-edit,
+.row-edit:focus-visible,
+.row-edit[aria-expanded="true"] {
+  opacity: 1;
+}
+
+.row-edit:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .task-head {
@@ -316,6 +382,7 @@ h3 {
   border-radius: 999px;
   font-size: 12px;
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 .status-chip strong {
@@ -471,7 +538,8 @@ h3 {
 .nav {
   display: flex;
   gap: 20px;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .nav a {
@@ -633,6 +701,10 @@ pre {
     grid-template-columns: 1fr;
   }
 
+  .create-columns {
+    grid-template-columns: 1fr;
+  }
+
   .top {
     grid-template-columns: 1fr auto;
   }
@@ -641,6 +713,12 @@ pre {
     grid-column: 1 / -1;
     flex-wrap: wrap;
     gap: 14px;
+  }
+}
+
+@media (hover: none) {
+  .row-edit {
+    opacity: 1;
   }
 }
 

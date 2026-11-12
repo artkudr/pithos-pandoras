@@ -38,12 +38,51 @@
                   <input name="folder_pattern" value="{number} - {date}" required>
                 </label>
               </div>
-              <label>Роли через запятую
-                <input name="roles" value="Коммандер,Исполнитель,Проверяющий">
-              </label>
-              <label>Настройки в JSON
-                <textarea class="code-input" name="config_json" rows="6">{}</textarea>
-              </label>
+              <div class="create-columns">
+                <div>
+                  <p class="field-label">Роли</p>
+                  <table class="roles-editor" id="roles-editor">
+                    <thead>
+                      <tr>
+                        <th class="add-col">
+                          <button type="button" class="add-button" data-add-role title="Добавить роль" aria-label="Добавить роль">+</button>
+                        </th>
+                        <th>Название</th>
+                        <th>Цвет</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="edit-col"></td>
+                        <td><input name="role_name" value="Коммандер" aria-label="Название роли"></td>
+                        <td><input type="color" name="role_color" value="#5c7cfa" aria-label="Цвет роли"></td>
+                      </tr>
+                      <tr>
+                        <td class="edit-col"></td>
+                        <td><input name="role_name" value="Исполнитель" aria-label="Название роли"></td>
+                        <td><input type="color" name="role_color" value="#e8890c" aria-label="Цвет роли"></td>
+                      </tr>
+                      <tr>
+                        <td class="edit-col"></td>
+                        <td><input name="role_name" value="Проверяющий" aria-label="Название роли"></td>
+                        <td><input type="color" name="role_color" value="#2f9e44" aria-label="Цвет роли"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <template id="role-row-template">
+                    <tr>
+                      <td class="edit-col"></td>
+                      <td><input name="role_name" placeholder="например, Оракул" aria-label="Название роли"></td>
+                      <td><input type="color" name="role_color" value="#868e96" aria-label="Цвет роли"></td>
+                    </tr>
+                  </template>
+                  <input type="hidden" name="roles_json" id="roles-json" value="">
+                  <input type="hidden" name="roles" value="Коммандер,Исполнитель,Проверяющий">
+                </div>
+                <label>Настройки в JSON
+                  <textarea class="code-input" name="config_json" rows="6">{}</textarea>
+                </label>
+              </div>
             </details>
             <div class="form-actions">
               <button type="submit">Создать проект</button>

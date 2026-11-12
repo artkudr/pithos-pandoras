@@ -135,17 +135,23 @@ pub fn list_projects(conn: &Connection) -> Result<Vec<Project>, StoreError> {
     Ok(out)
 }
 
-pub fn add_role(conn: &Connection, project_id: &str, name: &str) -> Result<(), StoreError> {
+pub fn add_role(
+    conn: &Connection,
+    project_id: &str,
+    name: &str,
+    color: Option<&str>,
+) -> Result<(), StoreError> {
     let sort: i64 = conn.query_row(
         "SELECT COALESCE(MAX(sort), 0) + 10 FROM project_roles WHERE project_id = ?1",
         [project_id],
         |row| row.get(0),
     )?;
     conn.execute(
-        "INSERT OR IGNORE INTO project_roles
+        "INSERT INTO project_roles
          (project_id, name, color, sort)
-         VALUES (?1, ?2, NULL, ?3)",
-        params![project_id, name, sort],
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(project_id, name) DO UPDATE SET color = excluded.color",
+        params![project_id, name, color, sort],
     )?;
     Ok(())
 }
@@ -205,7 +211,7 @@ pub fn init_project(
     root_path: &str,
     tasks_dir: &str,
     folder_pattern: &str,
-    roles: &[String],
+    roles: &[(String, Option<String>)],
     config_json: &str,
 ) -> Result<Project, StoreError> {
     let now = now_rfc3339();
@@ -260,12 +266,12 @@ pub fn init_project(
         )?;
     }
 
-    for (index, role) in roles.iter().enumerate() {
+    for (index, (role, color)) in roles.iter().enumerate() {
         tx.execute(
             "INSERT OR IGNORE INTO project_roles
              (project_id, name, color, sort)
-             VALUES (?1, ?2, NULL, ?3)",
-            params![project_id, role, index as i64],
+             VALUES (?1, ?2, ?3, ?4)",
+            params![project_id, role, color, index as i64],
         )?;
     }
 

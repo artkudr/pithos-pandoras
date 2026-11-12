@@ -220,7 +220,7 @@ impl Service {
         root_path: &str,
         tasks_dir: &str,
         folder_pattern: &str,
-        roles: &[String],
+        roles: &[(String, Option<String>)],
         config_json: &str,
     ) -> Result<Project, AppError> {
         let name = require_field(Some(name), "name")?.to_string();
@@ -229,10 +229,10 @@ impl Service {
         let folder_pattern = require_field(Some(folder_pattern), "folder_pattern")?.to_string();
         serde_json::from_str::<serde_json::Value>(config_json)
             .map_err(|err| AppError::field_missing("config_json").with_hint(err.to_string()))?;
-        let roles: Vec<String> = roles
+        let roles: Vec<(String, Option<String>)> = roles
             .iter()
-            .map(|role| role.trim().to_string())
-            .filter(|role| !role.is_empty())
+            .map(|(role, color)| (role.trim().to_string(), normalize_color(color.as_deref())))
+            .filter(|(role, _)| !role.is_empty())
             .collect();
         let config_json = config_json.to_string();
 
@@ -253,12 +253,18 @@ impl Service {
         Ok(project)
     }
 
-    pub async fn add_role(&self, project: &str, role: &str) -> Result<(), AppError> {
+    pub async fn add_role(
+        &self,
+        project: &str,
+        role: &str,
+        color: Option<&str>,
+    ) -> Result<(), AppError> {
         let role = require_field(Some(role), "role")?.to_string();
+        let color = normalize_color(color);
         let view = self.project_view(project).await?;
         let project_id = view.project.id;
         self.store
-            .write(move |conn| projects::add_role(conn, &project_id, &role))
+            .write(move |conn| projects::add_role(conn, &project_id, &role, color.as_deref()))
             .await?;
         Ok(())
     }
@@ -1448,6 +1454,11 @@ impl Service {
                             (SELECT st.role FROM stages st
                               WHERE st.task_id = t.id AND st.finished_at IS NULL
                               LIMIT 1),
+                            (SELECT r.color FROM stages st
+                              JOIN project_roles r
+                                ON r.project_id = t.project_id AND r.name = st.role
+                              WHERE st.task_id = t.id AND st.finished_at IS NULL
+                              LIMIT 1),
                             t.waiting_for, t.updated_at
                      FROM tasks t
                      LEFT JOIN project_statuses s
@@ -1474,8 +1485,9 @@ impl Service {
                         status_id: row.get(4)?,
                         status_title: row.get(5)?,
                         current_role: row.get(6)?,
-                        waiting_for: row.get(7)?,
-                        updated_at: row.get(8)?,
+                        current_role_color: row.get(7)?,
+                        waiting_for: row.get(8)?,
+                        updated_at: row.get(9)?,
                     })
                 })?;
                 let mut out = Vec::new();
@@ -1673,6 +1685,19 @@ fn validate_kind(kind: &str, allowed: &[&str]) -> Result<(), AppError> {
         Err(AppError::field_missing("kind")
             .with_allowed(allowed.iter().map(|value| (*value).to_string()).collect()))
     }
+}
+
+/// Цвет роли: принимаем только `#rgb` или `#rrggbb`, иначе считаем, что цвета нет.
+fn normalize_color(color: Option<&str>) -> Option<String> {
+    let value = color?.trim();
+    let digits = match value.len() {
+        4 | 7 => &value[1..],
+        _ => return None,
+    };
+    if !value.starts_with('#') || !digits.chars().all(|ch| ch.is_ascii_hexdigit()) {
+        return None;
+    }
+    Some(value.to_string())
 }
 
 fn is_return_verdict(verdict: &str) -> bool {

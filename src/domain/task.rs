@@ -41,6 +41,7 @@ pub struct TaskListItem {
     pub status_id: String,
     pub status_title: String,
     pub current_role: Option<String>,
+    pub current_role_color: Option<String>,
     pub waiting_for: String,
     pub updated_at: String,
 }

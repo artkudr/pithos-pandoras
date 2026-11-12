@@ -5,15 +5,6 @@
 {% block content %}
 <h1 class="sr-only">Доска</h1>
 
-<section class="stats">
-  {% for count in counts %}
-    <div class="stat">
-      <span>{{ count.title }}</span>
-      <strong>{{ count.count }}</strong>
-    </div>
-  {% endfor %}
-</section>
-
 <div class="table-wrap">
   <table class="board">
     <thead>
@@ -64,7 +55,7 @@
             <td class="num">{{ task.number }}</td>
             <td><a href="/tasks/{{ task.number }}">{{ task.title }}</a></td>
             <td><span class="status-chip"><span class="dot" style="--dot: {{ task.status_color }}" aria-hidden="true"></span>{{ task.status }}</span></td>
-            <td>{{ task.current_role }}</td>
+            <td>{% if !task.current_role_color.is_empty() %}<span style="color: {{ task.current_role_color }}">{{ task.current_role }}</span>{% else %}{{ task.current_role }}{% endif %}</td>
             <td>{{ task.waiting_for }}</td>
             <td class="muted nowrap">{{ task.updated_at }}</td>
           </tr>

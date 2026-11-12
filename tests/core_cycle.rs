@@ -16,9 +16,9 @@ async fn setup(config: &str) -> (Arc<Service>, TempDir) {
     let store = Arc::new(Store::open(dir.path().join("test.db")).unwrap());
     let root = dir.path().to_string_lossy().to_string();
     let roles = vec![
-        String::from("Коммандер"),
-        String::from("Исполнитель"),
-        String::from("Проверяющий"),
+        (String::from("Коммандер"), None),
+        (String::from("Исполнитель"), None),
+        (String::from("Проверяющий"), None),
     ];
     let config = config.to_string();
 

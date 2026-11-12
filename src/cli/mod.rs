@@ -187,7 +187,8 @@ async fn init(args: InitArgs) -> anyhow::Result<()> {
     let project_name = args.project.clone();
     let tasks_dir = args.tasks_dir.clone();
     let folder_pattern = args.folder_pattern.clone();
-    let roles = args.roles.clone();
+    let roles: Vec<(String, Option<String>)> =
+        args.roles.iter().map(|role| (role.clone(), None)).collect();
     let config = args.config.clone();
 
     let project = store
