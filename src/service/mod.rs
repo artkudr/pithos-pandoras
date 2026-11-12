@@ -462,6 +462,23 @@ impl Service {
                     &payload,
                     "agent",
                 )?;
+                if is_return_verdict(&verdict_for_write) {
+                    let payload = serde_json::json!({
+                        "report_id": &report.id,
+                        "kind": &report.kind,
+                        "verdict": &verdict_for_write,
+                    })
+                    .to_string();
+                    events::insert_event(
+                        &tx,
+                        &task_id_for_write,
+                        "stage_returned",
+                        Some(&stage_id),
+                        None,
+                        &payload,
+                        "agent",
+                    )?;
+                }
                 tx.commit()?;
                 Ok((stage, report))
             })
@@ -1310,6 +1327,10 @@ fn validate_kind(kind: &str, allowed: &[&str]) -> Result<(), AppError> {
         Err(AppError::field_missing("kind")
             .with_allowed(allowed.iter().map(|value| (*value).to_string()).collect()))
     }
+}
+
+fn is_return_verdict(verdict: &str) -> bool {
+    matches!(verdict, "return" | "returned" | "возврат" | "на доработку")
 }
 
 fn require_workspace(value: Option<&str>) -> Result<&str, AppError> {

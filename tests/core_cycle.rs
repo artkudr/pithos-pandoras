@@ -262,6 +262,39 @@ async fn report_put_adds_second_kind_to_open_stage() {
 }
 
 #[tokio::test]
+async fn return_input_takes_report_that_sent_task_back() {
+    let config = r#"{"inputs":{"Исполнитель":[{"from":"Проверяющий","kind":"report","round":"return","required":true}]}}"#;
+    let (service, _dir) = setup(config).await;
+    let task = create_task(&service, "С возвратом").await;
+    let task_ref = task.task.number.to_string();
+
+    service
+        .stage_start(start_req(&task_ref, "Проверяющий"))
+        .await
+        .unwrap();
+    service
+        .stage_finish(StageFinishRequest {
+            workspace: Some(String::from("PithosPandoras")),
+            task: Some(task_ref.clone()),
+            role: Some(String::from("Проверяющий")),
+            verdict: Some(String::from("return")),
+            report: Some(String::from("верни на доработку")),
+            kind: None,
+        })
+        .await
+        .unwrap();
+
+    let started = service
+        .stage_start(start_req(&task_ref, "Исполнитель"))
+        .await
+        .unwrap();
+    assert_eq!(started.inputs.len(), 1);
+    assert_eq!(started.inputs[0].role, "Проверяющий");
+    assert_eq!(started.inputs[0].round, 1);
+    assert_eq!(started.inputs[0].kind, "report");
+}
+
+#[tokio::test]
 async fn parallel_task_create_gets_unique_numbers() {
     let (service, _dir) = setup("{}").await;
 

@@ -141,7 +141,7 @@ pub fn find_report_for_rule(
             current_role,
             Some(current_round - 1),
         ),
-        "return" => return Ok(None),
+        "return" => return find_return_report(conn, task_id, from_role),
         other => {
             return Err(StoreError::Invalid(format!(
                 "неизвестное правило круга: {other}"
@@ -170,4 +170,32 @@ pub fn find_report_for_rule(
         created_at: row.get(8)?,
     };
     Ok(Some((stage_round, report)))
+}
+
+fn find_return_report(
+    conn: &Connection,
+    task_id: &str,
+    from_role: &str,
+) -> Result<Option<(i64, Report)>, StoreError> {
+    let row = conn
+        .query_row(
+            "SELECT e.payload, s.round
+             FROM events e
+             JOIN stages s ON s.id = e.stage_id
+             WHERE e.task_id = ?1 AND e.kind = 'stage_returned' AND s.role = ?2
+             ORDER BY e.seq DESC LIMIT 1",
+            params![task_id, from_role],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)),
+        )
+        .optional()?;
+    let Some((payload, round)) = row else {
+        return Ok(None);
+    };
+    let value: serde_json::Value = serde_json::from_str(&payload)?;
+    let report_id = value
+        .get("report_id")
+        .and_then(|value| value.as_str())
+        .ok_or_else(|| StoreError::Invalid("stage_returned без report_id".to_string()))?;
+    let report = get_report(conn, report_id)?;
+    Ok(Some((round, report)))
 }
