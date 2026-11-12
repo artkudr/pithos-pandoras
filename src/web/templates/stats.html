@@ -14,11 +14,11 @@
   <div class="table-wrap">
     <table class="board">
       <thead>
-        <tr><th>Статус</th><th>Задач</th></tr>
+        <tr><th>Статус</th><th class="cell-num">Задач</th></tr>
       </thead>
       <tbody>
         {% for count in by_status %}
-          <tr><td><span class="dot" style="--dot: {{ count.color }}" aria-hidden="true"></span>{{ count.title }}</td><td class="num">{{ count.count }}</td></tr>
+          <tr><td><span class="dot" style="--dot: {{ count.color }}" aria-hidden="true"></span>{{ count.title }}</td><td class="cell-num">{{ count.count }}</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -33,14 +33,14 @@
     <div class="table-wrap">
       <table class="board">
         <thead>
-          <tr><th>Роль</th><th>Этапов</th><th>Время</th></tr>
+          <tr><th>Роль</th><th class="cell-num">Этапов</th><th class="cell-num">Время</th></tr>
         </thead>
         <tbody>
           {% for role in by_role %}
             <tr>
               <td>{{ role.role }}</td>
-              <td class="num">{{ role.stages }}</td>
-              <td class="num">{{ role.duration }}</td>
+              <td class="cell-num">{{ role.stages }}</td>
+              <td class="cell-num">{{ role.duration }}</td>
             </tr>
           {% endfor %}
         </tbody>

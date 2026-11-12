@@ -5,11 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}PithosPandoras{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/icon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/static/icon-180.png">
 </head>
 <body>
   <header class="top">
     <div class="brand-block">
-      <a class="brand" href="/">PithosPandoras</a>
+      <a class="brand" href="/"><img class="brand-mark" src="/static/icon.svg" alt="" width="22" height="22">PithosPandoras</a>
       <span class="project"><span class="dot dot-current" aria-hidden="true"></span>{{ project }}</span>
     </div>
     <nav class="nav" aria-label="Разделы">
