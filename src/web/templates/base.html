@@ -19,7 +19,12 @@
     </nav>
   </header>
   <main class="page">
+    <p class="live-notice" id="live-notice" role="status" hidden>
+      На странице есть изменения.
+      <button type="button" class="live-reload" id="live-reload">Обновить</button>
+    </p>
     {% block content %}{% endblock %}
   </main>
+  <script src="/static/live.js" defer></script>
 </body>
 </html>

@@ -381,3 +381,23 @@ pre {
     width: 100%;
   }
 }
+
+.live-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--warn-line);
+  border-radius: var(--radius);
+  background: var(--warn);
+}
+
+.live-notice[hidden] {
+  display: none;
+}
+
+.live-reload {
+  padding: 4px 10px;
+  font-size: 14px;
+}

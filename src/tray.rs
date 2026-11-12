@@ -155,8 +155,11 @@ pub fn run() -> anyhow::Result<()> {
                     tracing::error!(%err, "пространство не найдено");
                     return Err(err.into());
                 }
-                let app = mcp::server::router(service.clone(), key)
-                    .merge(web::pages::router(service, workspace));
+                let app = mcp::server::router(service.clone(), key).merge(web::pages::router(
+                    service,
+                    workspace,
+                    web::live::Live::spawn(PathBuf::from(&db)),
+                ));
                 let listener = tokio::net::TcpListener::bind(("127.0.0.1", port)).await?;
                 let _ = ready_tx.send(());
                 axum::serve(listener, app)

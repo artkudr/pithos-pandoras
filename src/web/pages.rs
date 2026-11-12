@@ -15,11 +15,13 @@ use crate::service::{
     FileAddRequest, Service, TaskBlockRequest, TaskCloseRequest, TaskNoteRequest,
     TaskReopenRequest, TaskResumeRequest, TaskSetStatusRequest, TaskUpdateRequest, HUMAN_ACTOR,
 };
+use crate::web::live::Live;
 
 #[derive(Clone)]
 struct AppState {
     service: Arc<Service>,
     workspace: Arc<tokio::sync::RwLock<String>>,
+    live: Live,
 }
 
 impl AppState {
@@ -32,10 +34,11 @@ impl AppState {
 #[folder = "src/web/static/"]
 struct Assets;
 
-pub fn router(service: Arc<Service>, workspace: String) -> axum::Router {
+pub fn router(service: Arc<Service>, workspace: String, live: Live) -> axum::Router {
     let state = AppState {
         service,
         workspace: Arc::new(tokio::sync::RwLock::new(workspace)),
+        live,
     };
     axum::Router::new()
         .route("/", get(board))
@@ -64,8 +67,13 @@ pub fn router(service: Arc<Service>, workspace: String) -> axum::Router {
         .route("/settings/config", post(update_config))
         .route("/settings/paths", post(update_paths))
         .route("/files/{file_id}", get(file))
+        .route("/events", get(live_events))
         .route("/static/{*path}", get(static_file))
         .with_state(state)
+}
+
+async fn live_events(State(state): State<AppState>) -> impl IntoResponse {
+    crate::web::live::stream(&state.live)
 }
 
 async fn board(State(state): State<AppState>) -> Result<Html<String>, WebError> {

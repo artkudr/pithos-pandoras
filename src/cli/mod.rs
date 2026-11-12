@@ -124,8 +124,11 @@ async fn serve(args: ServeArgs) -> anyhow::Result<()> {
         return Err(err.into());
     }
 
-    let app = mcp::server::router(service.clone(), key)
-        .merge(web::pages::router(service, args.workspace.clone()));
+    let app = mcp::server::router(service.clone(), key).merge(web::pages::router(
+        service,
+        args.workspace.clone(),
+        web::live::Live::spawn(args.db.clone()),
+    ));
 
     let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr)

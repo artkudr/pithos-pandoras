@@ -618,3 +618,20 @@ async fn backup_makes_readable_copy() {
         .unwrap();
     assert_eq!(integrity, "ok");
 }
+
+#[tokio::test]
+async fn live_reports_change_after_write() {
+    use std::time::Duration;
+
+    let (service, dir) = setup("{}").await;
+    let live = pithos_pandoras::web::live::Live::spawn_every(
+        dir.path().join("test.db"),
+        Duration::from_millis(20),
+    );
+    let mut changes = live.subscribe();
+
+    create_task(&service, "Живая").await;
+
+    let got = tokio::time::timeout(Duration::from_secs(5), changes.recv()).await;
+    assert!(got.is_ok(), "поток изменений молчит");
+}
