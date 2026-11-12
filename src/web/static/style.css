@@ -150,6 +150,10 @@ h3 {
   margin-bottom: 0;
 }
 
+.card .board {
+  background: var(--bg);
+}
+
 .board {
   width: 100%;
   border-collapse: collapse;
