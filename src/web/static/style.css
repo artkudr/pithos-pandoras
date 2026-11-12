@@ -154,7 +154,7 @@ h3 {
   width: 100%;
   border-collapse: collapse;
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--field-line);
   border-radius: var(--radius);
   overflow: hidden;
 }
@@ -179,7 +179,7 @@ h3 {
 }
 
 .board thead th {
-  background: var(--bg);
+  background: color-mix(in srgb, var(--text) 7%, transparent);
 }
 
 .board tbody tr:last-child td {
@@ -238,6 +238,12 @@ h3 {
 .dot-current {
   background: #2f9e44;
   box-shadow: 0 0 0 3px color-mix(in srgb, #2f9e44 22%, transparent);
+}
+
+.cell-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .status-chip {

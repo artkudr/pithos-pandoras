@@ -62,7 +62,7 @@
         {% for status in statuses %}
           <tr>
             <td><code>{{ status.id }}</code></td>
-            <td><span class="dot" style="--dot: {{ status.color }}" aria-hidden="true"></span>{{ status.title }}</td>
+            <td><span class="cell-status"><span class="dot" style="--dot: {{ status.color }}" aria-hidden="true"></span>{{ status.title }}</span></td>
             <td>{{ status.kind_label }}</td>
           </tr>
         {% endfor %}
