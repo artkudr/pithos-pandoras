@@ -28,6 +28,91 @@
   </dl>
 </section>
 
+<section class="card actions">
+  <h2>Действия</h2>
+
+  {% if task.status_kind != "done" %}
+    <form class="inline-form" method="post" action="/tasks/{{ task.number }}/close">
+      <button type="submit" class="danger">Закрыть задачу</button>
+    </form>
+  {% endif %}
+
+  <details>
+    <summary>Изменить название или постановку</summary>
+    <form class="form" method="post" action="/tasks/{{ task.number }}/update">
+      <label>Название
+        <input name="title" value="{{ task.title }}">
+      </label>
+      <label>Постановка
+        <textarea name="statement" rows="4">{{ task.statement }}</textarea>
+      </label>
+      <button type="submit">Сохранить</button>
+    </form>
+  </details>
+
+  <details>
+    <summary>Сменить статус</summary>
+    <form class="form" method="post" action="/tasks/{{ task.number }}/status">
+      <label>Статус
+        <select name="status">
+          {% for status in statuses %}
+            <option value="{{ status.id }}" {% if status.id == task.status_id %}selected{% endif %}>{{ status.title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">Сменить</button>
+    </form>
+  </details>
+
+  <details>
+    <summary>Остановить или поставить в ожидание</summary>
+    <form class="form" method="post" action="/tasks/{{ task.number }}/block">
+      <label>Причина
+        <textarea name="reason" rows="2" required></textarea>
+      </label>
+      <label>Ждём кого
+        <input name="waiting_for" placeholder="человек или роль">
+      </label>
+      <label>Ссылка
+        <input name="waiting_ref">
+      </label>
+      <button type="submit">Остановить</button>
+    </form>
+  </details>
+
+  <details>
+    <summary>Возобновить</summary>
+    <form class="form" method="post" action="/tasks/{{ task.number }}/resume">
+      <label>Причина
+        <input name="reason" required>
+      </label>
+      <button type="submit">Возобновить</button>
+    </form>
+  </details>
+
+  {% if task.status_kind == "done" %}
+    <details>
+      <summary>Переоткрыть</summary>
+      <form class="form" method="post" action="/tasks/{{ task.number }}/reopen">
+        <label>Причина
+          <input name="reason" required>
+        </label>
+        <button type="submit">Переоткрыть</button>
+      </form>
+    </details>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Комментарий</h2>
+  <form class="form" method="post" action="/tasks/{{ task.number }}/note">
+    <label>Текст
+      <textarea name="text" rows="3" required></textarea>
+    </label>
+    <button type="submit">Добавить</button>
+  </form>
+</section>
+
 {% match current_stage %}
   {% when Some with (stage) %}
     <section class="card">

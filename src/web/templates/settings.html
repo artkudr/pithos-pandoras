@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки — {{ workspace }}{% endblock %}
+
+{% block content %}
+<h1>Настройки</h1>
+
+<section class="card">
+  <h2>Пространство</h2>
+  <dl class="meta">
+    <dt>Имя</dt><dd>{{ name }}</dd>
+    <dt>Корень</dt><dd>{{ root_path }}</dd>
+    <dt>Папка задач</dt><dd>{{ tasks_dir }}</dd>
+    <dt>Шаблон папки</dt><dd>{{ folder_pattern }}</dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>Роли</h2>
+  {% if roles.is_empty() %}
+    <p class="muted">Ролей нет.</p>
+  {% else %}
+    <ul class="files">
+      {% for role in roles %}
+        <li>{{ role }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Статусы</h2>
+  <table class="board">
+    <thead>
+      <tr><th>ID</th><th>Название</th><th>Тип</th></tr>
+    </thead>
+    <tbody>
+      {% for status in statuses %}
+        <tr>
+          <td><code>{{ status.id }}</code></td>
+          <td>{{ status.title }}</td>
+          <td>{{ status.kind }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2>config_json</h2>
+  <pre>{{ config_json }}</pre>
+</section>
+{% endblock %}

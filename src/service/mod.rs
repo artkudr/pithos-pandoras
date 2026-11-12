@@ -16,6 +16,8 @@ use crate::domain::{
 use crate::store::{self, Store, StoreError};
 use store::{comments, db, events, files, reports, stages, tasks, workspaces};
 
+pub const HUMAN_ACTOR: &str = "человек";
+
 #[derive(Clone)]
 pub struct Service {
     store: Arc<Store>,
@@ -194,6 +196,56 @@ impl Service {
         let view = self.workspace_view(&workspace_name).await?;
         ensure_role(&view.roles, &role)?;
 
+        self.create_task_internal(
+            &workspace_name,
+            &role,
+            "agent",
+            &title,
+            &statement,
+            req.route.as_deref(),
+            req.resource.as_deref(),
+        )
+        .await
+    }
+
+    pub async fn human_task_create(
+        &self,
+        workspace: &str,
+        title: &str,
+        statement: &str,
+        route: Option<&str>,
+        resource: Option<&str>,
+    ) -> Result<TaskCreated, AppError> {
+        let workspace_name = workspace.trim();
+        if workspace_name.is_empty() {
+            return Err(AppError::workspace_missing());
+        }
+        let title = require_field(Some(title), "title")?.to_string();
+        let statement = require_field(Some(statement), "statement")?.to_string();
+        self.create_task_internal(
+            workspace_name,
+            HUMAN_ACTOR,
+            "human",
+            &title,
+            &statement,
+            route,
+            resource,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn create_task_internal(
+        &self,
+        workspace_name: &str,
+        actor: &str,
+        origin: &str,
+        title: &str,
+        statement: &str,
+        route: Option<&str>,
+        resource: Option<&str>,
+    ) -> Result<TaskCreated, AppError> {
+        let view = self.workspace_view(workspace_name).await?;
         let new_status = view
             .statuses
             .iter()
@@ -205,11 +257,13 @@ impl Service {
         let workspace = view.workspace.clone();
         let workspace_for_write = workspace.clone();
         let date = db::local_date();
-        let route = req.route.clone();
-        let resource = req.resource.clone();
-        let origin = String::from("agent");
+        let route = route.map(str::to_string);
+        let resource = resource.map(str::to_string);
+        let origin = origin.to_string();
+        let actor = actor.to_string();
+        let title = title.to_string();
+        let statement = statement.to_string();
         let title_for_event = title.clone();
-        let role_for_event = role.clone();
 
         let (task, folder_name) = self
             .store
@@ -237,7 +291,7 @@ impl Service {
                     &task.id,
                     "task_created",
                     None,
-                    Some(&role_for_event),
+                    Some(&actor),
                     &payload,
                     &origin,
                 )?;
@@ -762,6 +816,7 @@ impl Service {
             ));
         }
 
+        let origin = event_origin(&role);
         let task = self
             .store
             .write(move |conn| {
@@ -774,7 +829,7 @@ impl Service {
                     None,
                     Some(&role),
                     "{}",
-                    "agent",
+                    origin,
                 )?;
                 tx.commit()?;
                 Ok(task)
@@ -808,7 +863,7 @@ impl Service {
             .await?;
 
         if let Some(stage) = &open {
-            if stage.role != role {
+            if role != HUMAN_ACTOR && stage.role != role {
                 return Err(AppError::conflict("открыт этап другой роли"));
             }
         }
@@ -823,6 +878,7 @@ impl Service {
             .as_ref()
             .and_then(|stage| compute_seconds(&stage.started_at, &now));
         let open_id = open.as_ref().map(|stage| stage.id.clone());
+        let origin = event_origin(&role);
 
         let task = self
             .store
@@ -847,7 +903,7 @@ impl Service {
                 };
                 let payload =
                     serde_json::json!({"reason": &reason, "waiting_for": &waiting_for}).to_string();
-                events::insert_event(&tx, &task_id, kind, None, Some(&role), &payload, "agent")?;
+                events::insert_event(&tx, &task_id, kind, None, Some(&role), &payload, origin)?;
                 tx.commit()?;
                 Ok(task)
             })
@@ -869,6 +925,7 @@ impl Service {
         let task_id = task.id.clone();
         let workspace_id = workspace.id.clone();
 
+        let origin = event_origin(&role);
         let task = self
             .store
             .write(move |conn| {
@@ -883,7 +940,7 @@ impl Service {
                     None,
                     Some(&role),
                     &payload,
-                    "agent",
+                    origin,
                 )?;
                 tx.commit()?;
                 Ok(task)
@@ -906,6 +963,7 @@ impl Service {
         let task_id = task.id.clone();
         let workspace_id = workspace.id.clone();
 
+        let origin = event_origin(&role);
         let task = self
             .store
             .write(move |conn| {
@@ -919,7 +977,7 @@ impl Service {
                     None,
                     Some(&role),
                     &payload,
-                    "agent",
+                    origin,
                 )?;
                 tx.commit()?;
                 Ok(task)
@@ -942,6 +1000,7 @@ impl Service {
         let task_id = task.id.clone();
         let now = db::now_rfc3339();
 
+        let origin = event_origin(&role);
         let comment = self
             .store
             .write(move |conn| {
@@ -955,7 +1014,7 @@ impl Service {
                     None,
                     Some(&role),
                     &payload,
-                    "agent",
+                    origin,
                 )?;
                 tx.commit()?;
                 Ok(comment)
@@ -1010,6 +1069,7 @@ impl Service {
         let task = self.task(&workspace.id, &task_ref).await?;
         let task_id = task.id.clone();
 
+        let origin = event_origin(&role);
         let task = self
             .store
             .write(move |conn| {
@@ -1025,7 +1085,7 @@ impl Service {
                     None,
                     Some(&role),
                     &payload,
-                    "agent",
+                    origin,
                 )?;
                 tx.commit()?;
                 Ok(task)
@@ -1048,6 +1108,7 @@ impl Service {
         let task_id = task.id.clone();
         let workspace_id = workspace.id.clone();
 
+        let origin = event_origin(&role);
         let task = self
             .store
             .write(move |conn| {
@@ -1067,7 +1128,7 @@ impl Service {
                         None,
                         Some(&role),
                         "{}",
-                        "agent",
+                        origin,
                     )?;
                     tx.commit()?;
                     return Ok(task);
@@ -1081,7 +1142,7 @@ impl Service {
                     None,
                     Some(&role),
                     &payload,
-                    "agent",
+                    origin,
                 )?;
                 tx.commit()?;
                 Ok(task)
@@ -1469,6 +1530,14 @@ fn is_return_verdict(verdict: &str) -> bool {
     matches!(verdict, "return" | "returned" | "возврат" | "на доработку")
 }
 
+fn event_origin(role: &str) -> &'static str {
+    if role == HUMAN_ACTOR {
+        "human"
+    } else {
+        "agent"
+    }
+}
+
 fn require_workspace(value: Option<&str>) -> Result<&str, AppError> {
     match value.map(str::trim).filter(|value| !value.is_empty()) {
         Some(value) => Ok(value),
@@ -1498,7 +1567,7 @@ fn require_field<'a>(value: Option<&'a str>, field: &str) -> Result<&'a str, App
 }
 
 fn ensure_role(roles: &[crate::domain::Role], role: &str) -> Result<(), AppError> {
-    if roles.iter().any(|item| item.name == role) {
+    if role == HUMAN_ACTOR || roles.iter().any(|item| item.name == role) {
         Ok(())
     } else {
         Err(AppError::role_unknown(

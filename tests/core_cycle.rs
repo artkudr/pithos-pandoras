@@ -6,7 +6,7 @@ use pithos_pandoras::domain::ErrorCode;
 use pithos_pandoras::service::{
     FileAddRequest, FileGetRequest, ReportAddRequest, ReportPutRequest, Service,
     StageFinishRequest, StageStartRequest, TaskBlockRequest, TaskCloseRequest, TaskCreateRequest,
-    TaskResumeRequest, TaskSetStatusRequest,
+    TaskNoteRequest, TaskResumeRequest, TaskSetStatusRequest,
 };
 use pithos_pandoras::store::{self, Store};
 use tempfile::TempDir;
@@ -132,6 +132,61 @@ async fn core_cycle_creates_numbers_and_closes_task() {
         .await
         .unwrap();
     assert_eq!(closed.status_id, "done");
+}
+
+#[tokio::test]
+async fn human_creates_task_with_human_origin() {
+    let (service, _dir) = setup("{}").await;
+    let created = service
+        .human_task_create("PithosPandoras", "Человеческая", "постановка", None, None)
+        .await
+        .unwrap();
+    assert_eq!(created.task.origin, "human");
+
+    let timeline = service
+        .task_timeline(
+            Some(String::from("PithosPandoras")),
+            Some(created.task.number.to_string()),
+        )
+        .await
+        .unwrap();
+    assert_eq!(timeline[0].actor.as_deref(), Some("человек"));
+    assert_eq!(timeline[0].origin, "human");
+}
+
+#[tokio::test]
+async fn human_note_and_block_use_human_actor() {
+    let (service, _dir) = setup("{}").await;
+    let task = create_task(&service, "Человеческие действия").await;
+    let task_ref = task.task.number.to_string();
+
+    let comment = service
+        .task_note(TaskNoteRequest {
+            workspace: Some(String::from("PithosPandoras")),
+            task: Some(task_ref.clone()),
+            role: Some(String::from("человек")),
+            text: Some(String::from("привет")),
+        })
+        .await
+        .unwrap();
+    assert_eq!(comment.author, "человек");
+
+    service
+        .stage_start(start_req(&task_ref, "Исполнитель"))
+        .await
+        .unwrap();
+    let blocked = service
+        .task_block(TaskBlockRequest {
+            workspace: Some(String::from("PithosPandoras")),
+            task: Some(task_ref),
+            role: Some(String::from("человек")),
+            reason: Some(String::from("стоп")),
+            waiting_for: None,
+            waiting_ref: None,
+        })
+        .await
+        .unwrap();
+    assert_eq!(blocked.status_id, "blocked");
 }
 
 #[tokio::test]

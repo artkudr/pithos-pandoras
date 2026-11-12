@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Поиск — {{ workspace }}{% endblock %}
+
+{% block content %}
+<h1>Поиск</h1>
+
+<form class="form search-form" method="get" action="/search">
+  <label>Запрос
+    <input name="q" value="{{ query }}" required>
+  </label>
+  <button type="submit">Найти</button>
+</form>
+
+{% if query.is_empty() %}
+  <p class="muted">Введите слово или фразу.</p>
+{% else %}
+  {% if tasks.is_empty() %}
+    <p class="muted">Ничего не найдено.</p>
+  {% else %}
+    <table class="board">
+      <thead>
+        <tr>
+          <th>№</th>
+          <th>Задача</th>
+          <th>Статус</th>
+          <th>Текущая роль</th>
+          <th>Ожидает</th>
+          <th>Обновлена</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks %}
+          <tr>
+            <td class="num">{{ task.number }}</td>
+            <td><a href="/tasks/{{ task.number }}">{{ task.title }}</a></td>
+            <td>{{ task.status }}</td>
+            <td>{{ task.current_role }}</td>
+            <td>{{ task.waiting_for }}</td>
+            <td class="muted">{{ task.updated_at }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endif %}
+{% endblock %}
