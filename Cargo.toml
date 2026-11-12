@@ -7,10 +7,13 @@ description = "Локальный сервис задач PithosPandoras"
 
 # Зависимости из архитектуры. Версии зафиксированы в Cargo.lock.
 [dependencies]
+ammonia = "4.2.4"
 anyhow = "1.0.104"
 askama = "0.16.1"
 axum = "0.8.9"
 clap = { version = "4.6.7", features = ["derive"] }
+mime_guess = "2.0.5"
+pulldown-cmark = "0.13.6"
 rmcp = { version = "3.9.0", features = ["transport-streamable-http-server"] }
 rusqlite = { version = "0.42.0", features = ["bundled"] }
 rust-embed = "8.14.0"

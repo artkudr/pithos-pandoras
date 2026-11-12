@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.number }} — {{ task.title }}{% endblock %}
+
+{% block content %}
+<nav><a href="/">← Доска</a></nav>
+
+<header class="task-head">
+  <h1><span class="num">{{ task.number }}</span> {{ task.title }}</h1>
+  <span class="status">{{ task.status }}</span>
+</header>
+
+{% if !warnings.is_empty() %}
+  <ul class="warnings">
+    {% for warning in warnings %}
+      <li>{{ warning }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<section class="card">
+  <h2>Постановка</h2>
+  <p class="statement">{{ task.statement }}</p>
+  <dl class="meta">
+    <dt>Папка</dt><dd>{{ task.folder_name }}</dd>
+    <dt>Создана</dt><dd>{{ task.created_at }}</dd>
+    <dt>Обновлена</dt><dd>{{ task.updated_at }}</dd>
+  </dl>
+</section>
+
+{% match current_stage %}
+  {% when Some with (stage) %}
+    <section class="card">
+      <h2>Текущий этап</h2>
+      <p><strong>{{ stage.role }}</strong>, круг {{ stage.round }}</p>
+      <p class="muted">Начат {{ stage.started_at }}</p>
+    </section>
+  {% when None %}
+{% endmatch %}
+
+<section class="card">
+  <h2>Отчёты</h2>
+  {% if reports.is_empty() %}
+    <p class="muted">Отчётов пока нет.</p>
+  {% else %}
+    {% for report in reports %}
+      <article class="report">
+        <header>
+          <span class="kind">{{ report.kind }}</span>
+          <h3>{{ report.title }}</h3>
+          <span class="muted">{{ report.role }} · {{ report.created_at }}</span>
+        </header>
+        <div class="markdown">{{ report.html|safe }}</div>
+      </article>
+    {% endfor %}
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Файлы</h2>
+  {% if files.is_empty() %}
+    <p class="muted">Файлов пока нет.</p>
+  {% else %}
+    <ul class="files">
+      {% for file in files %}
+        <li>
+          <a href="/files/{{ file.id }}">{{ file.title }}</a>
+          <span class="muted">{{ file.kind }} · {{ file.size }} · {{ file.created_at }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>История</h2>
+  {% if events.is_empty() %}
+    <p class="muted">Событий пока нет.</p>
+  {% else %}
+    <ol class="events">
+      {% for event in events %}
+        <li>
+          <span class="kind">{{ event.kind }}</span>
+          <span class="muted">{{ event.actor }} · {{ event.at }}</span>
+        </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Комментарии</h2>
+  {% if comments.is_empty() %}
+    <p class="muted">Комментариев пока нет.</p>
+  {% else %}
+    {% for comment in comments %}
+      <article class="comment">
+        <header>
+          <strong>{{ comment.author }}</strong>
+          <span class="muted">{{ comment.created_at }}</span>
+        </header>
+        <p>{{ comment.body }}</p>
+      </article>
+    {% endfor %}
+  {% endif %}
+</section>
+{% endblock %}

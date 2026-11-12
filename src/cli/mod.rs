@@ -9,6 +9,7 @@ use clap::{Args, Parser, Subcommand};
 use crate::mcp;
 use crate::service::Service;
 use crate::store::{self, Store};
+use crate::web;
 
 #[derive(Debug, Parser)]
 #[command(name = "pithos-pandoras", version, about = "Локальный сервис задач")]
@@ -35,6 +36,8 @@ pub struct ServeArgs {
     pub port: u16,
     #[arg(long, default_value = "pithos-pandoras.db")]
     pub db: PathBuf,
+    #[arg(long, default_value = "PithosPandoras")]
+    pub workspace: String,
     #[arg(long)]
     pub key: Option<String>,
     #[arg(long, default_value = "pithos-pandoras.key")]
@@ -47,6 +50,7 @@ impl Default for ServeArgs {
             host: String::from("127.0.0.1"),
             port: 8787,
             db: PathBuf::from("pithos-pandoras.db"),
+            workspace: String::from("PithosPandoras"),
             key: None,
             key_file: PathBuf::from("pithos-pandoras.key"),
         }
@@ -96,14 +100,16 @@ async fn serve(args: ServeArgs) -> anyhow::Result<()> {
     let key = load_or_create_key(args.key.as_deref(), &args.key_file)?;
     let store = Arc::new(Store::open(&args.db).context("открыть базу")?);
     let service = Arc::new(Service::new(store));
-    let app = mcp::server::router(service, key);
+    let app = mcp::server::router(service.clone(), key)
+        .merge(web::pages::router(service, args.workspace.clone()));
 
     let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .with_context(|| format!("занять адрес {addr}"))?;
 
-    println!("PithosPandoras: http://{addr}/mcp");
+    println!("PithosPandoras: http://{addr}/");
+    println!("MCP: http://{addr}/mcp");
     println!("MCP key file: {}", args.key_file.display());
     axum::serve(listener, app)
         .await

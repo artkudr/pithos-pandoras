@@ -15,6 +15,9 @@ try {
     cargo add rmcp --features transport-streamable-http-server
     cargo add rusqlite --features bundled
     cargo add askama
+    cargo add pulldown-cmark
+    cargo add ammonia
+    cargo add mime_guess
     cargo add serde --features derive
     cargo add serde_json
     cargo add tracing

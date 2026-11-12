@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ status }} — PithosPandoras</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="page">
+    <p><a href="/">← Доска</a></p>
+    <h1>{{ status }}</h1>
+    <p>{{ message }}</p>
+    {% match hint %}
+      {% when Some with (hint) %}
+        <p class="muted">{{ hint }}</p>
+      {% when None %}
+    {% endmatch %}
+    {% if !allowed.is_empty() %}
+      <p>Допустимые значения:</p>
+      <ul>
+        {% for value in allowed %}
+          <li><code>{{ value }}</code></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </main>
+</body>
+</html>

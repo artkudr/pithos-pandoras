@@ -80,6 +80,39 @@ pub fn list_report_previews(
     Ok(out)
 }
 
+pub fn list_reports_with_role(
+    conn: &Connection,
+    task_id: &str,
+) -> Result<Vec<(Report, String)>, StoreError> {
+    let mut stmt = conn.prepare(
+        "SELECT r.id, r.task_id, r.stage_id, r.actor, r.kind, r.title, r.content, r.created_at,
+                COALESCE(s.role, r.actor, '')
+         FROM reports r
+         LEFT JOIN stages s ON s.id = r.stage_id
+         WHERE r.task_id = ?1
+         ORDER BY r.created_at, r.id",
+    )?;
+    let rows = stmt.query_map([task_id], |row| {
+        let report = Report {
+            id: row.get(0)?,
+            task_id: row.get(1)?,
+            stage_id: row.get(2)?,
+            actor: row.get(3)?,
+            kind: row.get(4)?,
+            title: row.get(5)?,
+            content: row.get(6)?,
+            created_at: row.get(7)?,
+        };
+        let role: String = row.get(8)?;
+        Ok((report, role))
+    })?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row?);
+    }
+    Ok(out)
+}
+
 pub fn report_for_stage_kind(
     conn: &Connection,
     stage_id: &str,

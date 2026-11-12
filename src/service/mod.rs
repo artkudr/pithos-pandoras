@@ -10,8 +10,8 @@ use time::OffsetDateTime;
 
 use crate::domain::{
     AppError, Comment, Event, FileAdded, FileRecord, NextStep, RoleInput, RoleTime, StageFinish,
-    StageStart, StatusCount, Task, TaskCard, TaskCreated, TaskListItem, TaskStats, Workspace,
-    WorkspaceView,
+    StageStart, Status, StatusCount, Task, TaskCard, TaskCreated, TaskListItem, TaskStats,
+    Workspace, WorkspaceView,
 };
 use crate::store::{self, Store, StoreError};
 use store::{comments, db, events, files, reports, stages, tasks, workspaces};
@@ -19,6 +19,24 @@ use store::{comments, db, events, files, reports, stages, tasks, workspaces};
 #[derive(Clone)]
 pub struct Service {
     store: Arc<Store>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TaskReport {
+    pub report: crate::domain::Report,
+    pub role: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct TaskPageData {
+    pub task: Task,
+    pub status: Option<Status>,
+    pub current_stage: Option<crate::domain::Stage>,
+    pub reports: Vec<TaskReport>,
+    pub files: Vec<FileRecord>,
+    pub comments: Vec<Comment>,
+    pub events: Vec<Event>,
+    pub warnings: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -306,6 +324,66 @@ impl Service {
 
         match card {
             Ok(card) => Ok(card),
+            Err(StoreError::NotFound) => Err(AppError::task_unknown(&task_ref_for_error)),
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    pub async fn task_page(
+        &self,
+        workspace: Option<String>,
+        task: Option<String>,
+    ) -> Result<TaskPageData, AppError> {
+        let workspace_name = require_workspace(workspace.as_deref())?.to_string();
+        let task_ref = require_task(task.as_deref())?.to_string();
+        let view = self.workspace_view(&workspace_name).await?;
+        let workspace = view.workspace.clone();
+        let statuses = view.statuses;
+        let task_ref_for_error = task_ref.clone();
+
+        let page = self
+            .store
+            .read(move |conn| {
+                let task = tasks::get_task(conn, &workspace.id, &task_ref)?;
+                let status = statuses
+                    .iter()
+                    .find(|status| status.id == task.status_id)
+                    .cloned();
+                let current_stage = stages::open_stage(conn, &task.id)?;
+                let reports = reports::list_reports_with_role(conn, &task.id)?
+                    .into_iter()
+                    .map(|(report, role)| TaskReport { report, role })
+                    .collect();
+                let files = files::list_files(conn, &task.id)?;
+                let comments = comments::list_comments(conn, &task.id)?;
+                let events = events::list_events(conn, &task.id)?;
+                let mut warnings = Vec::new();
+                let folder_path = Path::new(&workspace.root_path)
+                    .join(&workspace.tasks_dir)
+                    .join(&task.folder_name);
+                if !folder_path.exists() {
+                    warnings.push(String::from("folder_missing"));
+                }
+                if let Some(resource) = &task.resource {
+                    if tasks::resource_busy(conn, &workspace.id, resource, &task.id)? {
+                        warnings.push(String::from("resource_busy"));
+                    }
+                }
+                Ok(TaskPageData {
+                    task,
+                    status,
+                    current_stage,
+                    reports,
+                    files,
+                    comments,
+                    events,
+                    warnings,
+                })
+            })
+            .await;
+
+        match page {
+            Ok(page) => Ok(page),
             Err(StoreError::NotFound) => Err(AppError::task_unknown(&task_ref_for_error)),
             Err(err) => Err(err.into()),
         }
@@ -1288,6 +1366,34 @@ impl Service {
         match file {
             Ok(file) if file.task_id == task_id => Ok(file),
             Ok(_) => Err(AppError::not_found("Файл не принадлежит задаче")),
+            Err(StoreError::NotFound) => Err(AppError::not_found("Файл не найден")),
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    pub async fn file_for_workspace(
+        &self,
+        workspace: &str,
+        file_id: &str,
+    ) -> Result<FileRecord, AppError> {
+        let view = self.workspace_view(workspace).await?;
+        let workspace_id = view.workspace.id;
+        let file_id = file_id.to_string();
+
+        let file = self
+            .store
+            .read(move |conn| {
+                let file = files::get_file(conn, &file_id)?;
+                let task = tasks::get_task_by_id(conn, &file.task_id)?;
+                if task.workspace_id != workspace_id {
+                    return Err(StoreError::NotFound);
+                }
+                Ok(file)
+            })
+            .await;
+
+        match file {
+            Ok(file) => Ok(file),
             Err(StoreError::NotFound) => Err(AppError::not_found("Файл не найден")),
             Err(err) => Err(err.into()),
         }
