@@ -5,36 +5,37 @@
 {% block content %}
 <h1>Пространства</h1>
 
-<table class="board">
-  <thead>
-    <tr>
-      <th>Имя</th>
-      <th>Корень</th>
-      <th>Папка задач</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in workspaces %}
+<div class="table-wrap">
+  <table class="board">
+    <thead>
       <tr>
-        <td>
-          {{ item.name }}
-          {% if item.name == current %}
-            <span class="kind">выбрано</span>
-          {% endif %}
-        </td>
-        <td>{{ item.root_path }}</td>
-        <td>{{ item.tasks_dir }}</td>
-        <td>
-          <form class="inline-form" method="post" action="/workspaces/select">
-            <input type="hidden" name="name" value="{{ item.name }}">
-            <button type="submit">Выбрать</button>
-          </form>
-        </td>
+        <th>Имя</th>
+        <th>Корень</th>
+        <th>Папка задач</th>
+        <th scope="col">Действие</th>
       </tr>
-    {% endfor %}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {% for item in workspaces %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ item.root_path }}</td>
+          <td>{{ item.tasks_dir }}</td>
+          <td>
+            {% if item.name == selected %}
+              <span class="kind">выбрано</span>
+            {% else %}
+              <form class="inline-form" method="post" action="/workspaces/select">
+                <input type="hidden" name="name" value="{{ item.name }}">
+                <button type="submit">Выбрать пространство</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
 <section class="card">
   <h2>Новое пространство</h2>
@@ -45,21 +46,24 @@
     <label>Корень проекта
       <input name="root_path" value="." required>
     </label>
-    <div class="form-row">
-      <label>Папка задач
-        <input name="tasks_dir" value="Задачи" required>
+    <details>
+      <summary>Дополнительно</summary>
+      <div class="form-row">
+        <label>Папка задач
+          <input name="tasks_dir" value="Задачи" required>
+        </label>
+        <label>Шаблон папки
+          <input name="folder_pattern" value="{number} - {date}" required>
+        </label>
+      </div>
+      <label>Роли через запятую
+        <input name="roles" value="Коммандер,Исполнитель,Проверяющий">
       </label>
-      <label>Шаблон папки
-        <input name="folder_pattern" value="{number} - {date}" required>
+      <label>Настройки в JSON
+        <textarea class="code-input" name="config_json" rows="6">{}</textarea>
       </label>
-    </div>
-    <label>Роли через запятую
-      <input name="roles" value="Коммандер,Исполнитель,Проверяющий">
-    </label>
-    <label>config_json
-      <textarea name="config_json" rows="6">{}</textarea>
-    </label>
-    <button type="submit">Создать и выбрать</button>
+    </details>
+    <button type="submit">Создать пространство</button>
   </form>
 </section>
 {% endblock %}

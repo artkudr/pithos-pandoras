@@ -4,8 +4,12 @@
 
 {% block content %}
 <h1>Настройки</h1>
-<p class="muted">Пространство: {{ name }}</p>
-<p><a href="/workspaces">Все пространства</a></p>
+
+{% match saved %}
+  {% when Some with (text) %}
+    <p class="muted" role="status">{{ text }}</p>
+  {% when None %}
+{% endmatch %}
 
 <section class="card">
   <h2>Пути пространства</h2>
@@ -28,7 +32,7 @@
 <section class="card">
   <h2>Роли</h2>
   {% if roles.is_empty() %}
-    <p class="muted">Ролей нет.</p>
+    <p class="muted">Ролей нет. Добавьте роль, чтобы агенты могли работать с задачами.</p>
   {% else %}
     <ul class="files">
       {% for role in roles %}
@@ -46,20 +50,22 @@
 
 <section class="card">
   <h2>Статусы</h2>
-  <table class="board">
-    <thead>
-      <tr><th>ID</th><th>Название</th><th>Тип</th></tr>
-    </thead>
-    <tbody>
-      {% for status in statuses %}
-        <tr>
-          <td><code>{{ status.id }}</code></td>
-          <td>{{ status.title }}</td>
-          <td>{{ status.kind }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-wrap">
+    <table class="board">
+      <thead>
+        <tr><th>ID</th><th>Название</th><th>Тип</th></tr>
+      </thead>
+      <tbody>
+        {% for status in statuses %}
+          <tr>
+            <td><code>{{ status.id }}</code></td>
+            <td>{{ status.title }}</td>
+            <td>{{ status.kind_label }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   <form class="form" method="post" action="/settings/statuses">
     <div class="form-row">
       <label>ID
@@ -72,27 +78,28 @@
     <div class="form-row">
       <label>Тип
         <select name="kind">
-          <option value="active">active</option>
-          <option value="waiting">waiting</option>
-          <option value="blocked">blocked</option>
-          <option value="done">done</option>
+          <option value="active">в работе</option>
+          <option value="waiting">ожидание</option>
+          <option value="blocked">остановлена</option>
+          <option value="done">закрыта</option>
         </select>
       </label>
       <label>Сортировка
         <input name="sort" type="number" value="100">
       </label>
     </div>
-    <button type="submit">Добавить или обновить статус</button>
+    <p class="muted">Строка с тем же ID будет заменена. Сортировка: меньше число — выше в списке.</p>
+    <button type="submit">Сохранить статус</button>
   </form>
 </section>
 
 <section class="card">
-  <h2>config_json</h2>
+  <h2>Настройки в JSON</h2>
   <form class="form" method="post" action="/settings/config">
     <label>Правила входов и настройки
-      <textarea name="config_json" rows="12">{{ config_json }}</textarea>
+      <textarea class="code-input" name="config_json" rows="12">{{ config_json }}</textarea>
     </label>
-    <button type="submit">Сохранить config_json</button>
+    <button type="submit">Сохранить настройки</button>
   </form>
 </section>
 {% endblock %}

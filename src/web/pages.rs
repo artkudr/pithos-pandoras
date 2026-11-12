@@ -83,6 +83,7 @@ async fn board(State(state): State<AppState>) -> Result<Html<String>, WebError> 
 
     let template = BoardTemplate {
         workspace,
+        current: "board",
         tasks: tasks.into_iter().map(board_task_view).collect(),
         counts: stats
             .by_status
@@ -150,6 +151,7 @@ async fn task_page(
 
     let template = TaskTemplate {
         workspace: workspace.clone(),
+        current: "board",
         task: TaskView {
             number: data.task.number,
             title: data.task.title,
@@ -172,7 +174,7 @@ async fn task_page(
             .reports
             .into_iter()
             .map(|item| ReportView {
-                kind: item.report.kind,
+                label: report_kind_label(&item.report.kind).to_string(),
                 title: item.report.title,
                 role: item.role,
                 created_at: format_local_time(&item.report.created_at),
@@ -185,7 +187,7 @@ async fn task_page(
             .map(|file| FileView {
                 id: file.id,
                 title: file.title,
-                kind: file.kind,
+                label: file_kind_label(&file.kind).to_string(),
                 size: file.size.map(format_size).unwrap_or_default(),
                 created_at: format_local_time(&file.created_at),
             })
@@ -203,7 +205,7 @@ async fn task_page(
             .events
             .into_iter()
             .map(|event| EventView {
-                kind: event.kind,
+                label: event_label(&event.kind),
                 actor: event.actor.unwrap_or_else(|| String::from("—")),
                 at: format_local_time(&event.at),
             })
@@ -455,6 +457,7 @@ async fn search(
 
     let template = SearchTemplate {
         workspace: workspace.clone(),
+        current: "search",
         query: q,
         tasks: tasks.into_iter().map(board_task_view).collect(),
     };
@@ -468,6 +471,7 @@ async fn stats(State(state): State<AppState>) -> Result<Html<String>, WebError> 
 
     let template = StatsTemplate {
         workspace: workspace.clone(),
+        current: "stats",
         by_status: stats
             .by_status
             .into_iter()
@@ -486,20 +490,29 @@ async fn stats(State(state): State<AppState>) -> Result<Html<String>, WebError> 
             })
             .collect(),
         open_stages: stats.open_stages,
-        waiting: stats.waiting,
-        blocked: stats.blocked,
     };
 
     render(template)
 }
 
-async fn settings(State(state): State<AppState>) -> Result<Html<String>, WebError> {
+async fn settings(
+    State(state): State<AppState>,
+    Query(query): Query<SettingsQuery>,
+) -> Result<Html<String>, WebError> {
     let workspace = state.current_workspace().await;
     let view = state.service.workspace_get(Some(workspace.clone())).await?;
+    let saved = match query.saved.as_deref() {
+        Some("paths") => Some("Пути сохранены."),
+        Some("roles") => Some("Роль добавлена."),
+        Some("statuses") => Some("Статус сохранён."),
+        Some("config") => Some("Настройки сохранены."),
+        _ => None,
+    };
 
     let template = SettingsTemplate {
         workspace: workspace.clone(),
-        name: view.workspace.name,
+        current: "settings",
+        saved,
         root_path: view.workspace.root_path,
         tasks_dir: view.workspace.tasks_dir,
         folder_pattern: view.workspace.folder_pattern,
@@ -511,7 +524,7 @@ async fn settings(State(state): State<AppState>) -> Result<Html<String>, WebErro
             .map(|status| SettingsStatusView {
                 id: status.id,
                 title: status.title,
-                kind: status.kind,
+                kind_label: status_kind_label(&status.kind).to_string(),
             })
             .collect(),
     };
@@ -524,7 +537,8 @@ async fn workspaces_page(State(state): State<AppState>) -> Result<Html<String>, 
     let workspaces = state.service.list_workspaces().await?;
     let template = WorkspacesTemplate {
         workspace: current.clone(),
-        current,
+        current: "workspaces",
+        selected: current,
         workspaces: workspaces
             .into_iter()
             .map(|workspace| WorkspaceItemView {
@@ -578,7 +592,7 @@ async fn add_role(
 ) -> Result<Redirect, WebError> {
     let workspace = state.current_workspace().await;
     state.service.add_role(&workspace, &form.name).await?;
-    Ok(Redirect::to("/settings"))
+    Ok(Redirect::to("/settings?saved=roles"))
 }
 
 async fn add_status(
@@ -596,7 +610,7 @@ async fn add_status(
             form.sort.unwrap_or(100),
         )
         .await?;
-    Ok(Redirect::to("/settings"))
+    Ok(Redirect::to("/settings?saved=statuses"))
 }
 
 async fn update_config(
@@ -608,7 +622,7 @@ async fn update_config(
         .service
         .update_config(&workspace, &form.config_json)
         .await?;
-    Ok(Redirect::to("/settings"))
+    Ok(Redirect::to("/settings?saved=config"))
 }
 
 async fn update_paths(
@@ -625,7 +639,7 @@ async fn update_paths(
             &form.folder_pattern,
         )
         .await?;
-    Ok(Redirect::to("/settings"))
+    Ok(Redirect::to("/settings?saved=paths"))
 }
 
 async fn file(
@@ -762,6 +776,62 @@ fn format_duration(seconds: i64) -> String {
     }
 }
 
+/// Подписи для машинных кодов: человек не должен читать имена из базы.
+fn event_label(kind: &str) -> String {
+    let label = match kind {
+        "task_created" => "Задача создана",
+        "task_updated" => "Задача изменена",
+        "task_status_changed" => "Статус изменён",
+        "task_noted" => "Комментарий добавлен",
+        "task_blocked" => "Задача остановлена",
+        "task_resumed" => "Задача возобновлена",
+        "task_closed" => "Задача закрыта",
+        "task_reopened" => "Задача переоткрыта",
+        "stage_started" => "Этап начат",
+        "stage_finished" => "Этап завершён",
+        "stage_returned" => "Этап возвращён",
+        "report_added" => "Отчёт добавлен",
+        "file_added" => "Файл добавлен",
+        other => return other.to_string(),
+    };
+    label.to_string()
+}
+
+fn report_kind_label(kind: &str) -> &'static str {
+    match kind {
+        "report" => "отчёт",
+        "plan" => "план",
+        "acceptance" => "приёмка",
+        "guide" => "инструкция",
+        "research" => "исследование",
+        "note" => "заметка",
+        _ => "отчёт",
+    }
+}
+
+fn file_kind_label(kind: &str) -> &'static str {
+    match kind {
+        "image" => "картинка",
+        "code" => "код",
+        _ => "файл",
+    }
+}
+
+fn status_kind_label(kind: &str) -> &'static str {
+    match kind {
+        "active" => "в работе",
+        "waiting" => "ожидание",
+        "blocked" => "остановлена",
+        "done" => "закрыта",
+        _ => "неизвестно",
+    }
+}
+
+#[derive(Deserialize)]
+struct SettingsQuery {
+    saved: Option<String>,
+}
+
 #[derive(Deserialize)]
 struct CreateTaskForm {
     title: String,
@@ -847,6 +917,7 @@ struct PathsForm {
 #[template(path = "board.html")]
 struct BoardTemplate {
     workspace: String,
+    current: &'static str,
     tasks: Vec<BoardTaskView>,
     counts: Vec<StatusCountView>,
 }
@@ -855,6 +926,7 @@ struct BoardTemplate {
 #[template(path = "task.html")]
 struct TaskTemplate {
     workspace: String,
+    current: &'static str,
     task: TaskView,
     statuses: Vec<StatusOptionView>,
     folder_missing: bool,
@@ -870,6 +942,7 @@ struct TaskTemplate {
 #[template(path = "search.html")]
 struct SearchTemplate {
     workspace: String,
+    current: &'static str,
     query: String,
     tasks: Vec<BoardTaskView>,
 }
@@ -878,18 +951,18 @@ struct SearchTemplate {
 #[template(path = "stats.html")]
 struct StatsTemplate {
     workspace: String,
+    current: &'static str,
     by_status: Vec<StatusCountView>,
     by_role: Vec<RoleTimeView>,
     open_stages: i64,
-    waiting: i64,
-    blocked: i64,
 }
 
 #[derive(Template)]
 #[template(path = "settings.html")]
 struct SettingsTemplate {
     workspace: String,
-    name: String,
+    current: &'static str,
+    saved: Option<&'static str>,
     root_path: String,
     tasks_dir: String,
     folder_pattern: String,
@@ -902,7 +975,8 @@ struct SettingsTemplate {
 #[template(path = "workspaces.html")]
 struct WorkspacesTemplate {
     workspace: String,
-    current: String,
+    current: &'static str,
+    selected: String,
     workspaces: Vec<WorkspaceItemView>,
 }
 
@@ -959,7 +1033,7 @@ struct StageView {
 }
 
 struct ReportView {
-    kind: String,
+    label: String,
     title: String,
     role: String,
     created_at: String,
@@ -969,7 +1043,7 @@ struct ReportView {
 struct FileView {
     id: String,
     title: String,
-    kind: String,
+    label: String,
     size: String,
     created_at: String,
 }
@@ -981,7 +1055,7 @@ struct CommentView {
 }
 
 struct EventView {
-    kind: String,
+    label: String,
     actor: String,
     at: String,
 }
@@ -995,9 +1069,8 @@ struct RoleTimeView {
 struct SettingsStatusView {
     id: String,
     title: String,
-    kind: String,
+    kind_label: String,
 }
-
 struct WebError {
     status: StatusCode,
     message: String,

@@ -7,43 +7,45 @@
 
 <section class="stats">
   <div class="stat"><span>Открытых этапов</span><strong>{{ open_stages }}</strong></div>
-  <div class="stat"><span>Ожидают</span><strong>{{ waiting }}</strong></div>
-  <div class="stat"><span>Остановлены</span><strong>{{ blocked }}</strong></div>
 </section>
 
 <section class="card">
   <h2>По статусам</h2>
-  <table class="board">
-    <thead>
-      <tr><th>Статус</th><th>Задач</th></tr>
-    </thead>
-    <tbody>
-      {% for count in by_status %}
-        <tr><td>{{ count.title }}</td><td class="num">{{ count.count }}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-wrap">
+    <table class="board">
+      <thead>
+        <tr><th>Статус</th><th>Задач</th></tr>
+      </thead>
+      <tbody>
+        {% for count in by_status %}
+          <tr><td>{{ count.title }}</td><td class="num">{{ count.count }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <section class="card">
   <h2>Время по ролям</h2>
   {% if by_role.is_empty() %}
-    <p class="muted">Этапов пока нет.</p>
+    <p class="muted">Время по ролям появится, когда закроется первый этап.</p>
   {% else %}
-    <table class="board">
-      <thead>
-        <tr><th>Роль</th><th>Этапов</th><th>Время</th></tr>
-      </thead>
-      <tbody>
-        {% for role in by_role %}
-          <tr>
-            <td>{{ role.role }}</td>
-            <td class="num">{{ role.stages }}</td>
-            <td>{{ role.duration }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="table-wrap">
+      <table class="board">
+        <thead>
+          <tr><th>Роль</th><th>Этапов</th><th>Время</th></tr>
+        </thead>
+        <tbody>
+          {% for role in by_role %}
+            <tr>
+              <td>{{ role.role }}</td>
+              <td class="num">{{ role.stages }}</td>
+              <td class="num">{{ role.duration }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% endif %}
 </section>
 {% endblock %}

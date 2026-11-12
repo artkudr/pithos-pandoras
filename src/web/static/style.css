@@ -9,6 +9,8 @@
   --accent-soft: #e7ebff;
   --warn: #fff4e5;
   --warn-line: #f0b429;
+  --field-line: #767680;
+  --danger: #b42318;
   --radius: 10px;
 }
 
@@ -23,6 +25,8 @@
     --accent-soft: #262b45;
     --warn: #3a2d18;
     --warn-line: #d09a2d;
+    --field-line: #84848f;
+    --danger: #ff8a8a;
   }
 }
 
@@ -117,6 +121,10 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 
+.table-wrap {
+  overflow-x: auto;
+}
+
 .board {
   width: 100%;
   border-collapse: collapse;
@@ -124,6 +132,10 @@ h3 {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow: hidden;
+}
+
+.nowrap {
+  white-space: nowrap;
 }
 
 .board th,
@@ -280,8 +292,14 @@ h3 {
 .nav {
   margin-left: auto;
   display: flex;
+  flex-wrap: wrap;
   gap: 14px;
   font-size: 14px;
+}
+
+.nav a[aria-current="page"] {
+  color: var(--text);
+  font-weight: 600;
 }
 
 .form {
@@ -307,7 +325,7 @@ h3 {
 .form select {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--field-line);
   border-radius: 8px;
   background: var(--bg);
   color: var(--text);
@@ -318,9 +336,27 @@ h3 {
   resize: vertical;
 }
 
+.form .code-input {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 14px;
+}
+
+.form details {
+  border-top: 0;
+  padding: 0;
+}
+
+.form details > * {
+  margin: 0 0 12px;
+}
+
+.form details > *:last-child {
+  margin-bottom: 0;
+}
+
 button {
   padding: 8px 14px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--field-line);
   border-radius: 8px;
   background: var(--panel);
   color: var(--text);
@@ -333,9 +369,29 @@ button:hover {
   color: var(--accent);
 }
 
+button:active {
+  background: var(--accent-soft);
+}
+
+button:disabled {
+  border-color: var(--line);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
 button.danger {
-  border-color: #c92a2a;
-  color: #c92a2a;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .inline-form {

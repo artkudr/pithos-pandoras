@@ -3,8 +3,6 @@
 {% block title %}{{ task.number }} — {{ task.title }}{% endblock %}
 
 {% block content %}
-<nav><a href="/">← Доска</a></nav>
-
 <header class="task-head">
   <h1><span class="num">{{ task.number }}</span> {{ task.title }}</h1>
   <span class="status">{{ task.status }}</span>
@@ -28,91 +26,6 @@
   </dl>
 </section>
 
-<section class="card actions">
-  <h2>Действия</h2>
-
-  {% if task.status_kind != "done" %}
-    <form class="inline-form" method="post" action="/tasks/{{ task.number }}/close">
-      <button type="submit" class="danger">Закрыть задачу</button>
-    </form>
-  {% endif %}
-
-  <details>
-    <summary>Изменить название или постановку</summary>
-    <form class="form" method="post" action="/tasks/{{ task.number }}/update">
-      <label>Название
-        <input name="title" value="{{ task.title }}">
-      </label>
-      <label>Постановка
-        <textarea name="statement" rows="4">{{ task.statement }}</textarea>
-      </label>
-      <button type="submit">Сохранить</button>
-    </form>
-  </details>
-
-  <details>
-    <summary>Сменить статус</summary>
-    <form class="form" method="post" action="/tasks/{{ task.number }}/status">
-      <label>Статус
-        <select name="status">
-          {% for status in statuses %}
-            <option value="{{ status.id }}" {% if status.id == task.status_id %}selected{% endif %}>{{ status.title }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <button type="submit">Сменить</button>
-    </form>
-  </details>
-
-  <details>
-    <summary>Остановить или поставить в ожидание</summary>
-    <form class="form" method="post" action="/tasks/{{ task.number }}/block">
-      <label>Причина
-        <textarea name="reason" rows="2" required></textarea>
-      </label>
-      <label>Ждём кого
-        <input name="waiting_for" placeholder="человек или роль">
-      </label>
-      <label>Ссылка
-        <input name="waiting_ref">
-      </label>
-      <button type="submit">Остановить</button>
-    </form>
-  </details>
-
-  <details>
-    <summary>Возобновить</summary>
-    <form class="form" method="post" action="/tasks/{{ task.number }}/resume">
-      <label>Причина
-        <input name="reason" required>
-      </label>
-      <button type="submit">Возобновить</button>
-    </form>
-  </details>
-
-  {% if task.status_kind == "done" %}
-    <details>
-      <summary>Переоткрыть</summary>
-      <form class="form" method="post" action="/tasks/{{ task.number }}/reopen">
-        <label>Причина
-          <input name="reason" required>
-        </label>
-        <button type="submit">Переоткрыть</button>
-      </form>
-    </details>
-  {% endif %}
-</section>
-
-<section class="card">
-  <h2>Комментарий</h2>
-  <form class="form" method="post" action="/tasks/{{ task.number }}/note">
-    <label>Текст
-      <textarea name="text" rows="3" required></textarea>
-    </label>
-    <button type="submit">Добавить</button>
-  </form>
-</section>
-
 {% match current_stage %}
   {% when Some with (stage) %}
     <section class="card">
@@ -131,7 +44,7 @@
     {% for report in reports %}
       <article class="report">
         <header>
-          <span class="kind">{{ report.kind }}</span>
+          <span class="kind">{{ report.label }}</span>
           <h3>{{ report.title }}</h3>
           <span class="muted">{{ report.role }} · {{ report.created_at }}</span>
         </header>
@@ -139,6 +52,32 @@
       </article>
     {% endfor %}
   {% endif %}
+</section>
+
+<section class="card">
+  <h2>Комментарии</h2>
+  {% if comments.is_empty() %}
+    <p class="muted">Комментариев пока нет.</p>
+  {% else %}
+    {% for comment in comments %}
+      <article class="comment">
+        <header>
+          <strong>{{ comment.author }}</strong>
+          <span class="muted">{{ comment.created_at }}</span>
+        </header>
+        <p>{{ comment.body }}</p>
+      </article>
+    {% endfor %}
+  {% endif %}
+  <details>
+    <summary>Написать комментарий</summary>
+    <form class="form" method="post" action="/tasks/{{ task.number }}/note">
+      <label>Текст
+        <textarea name="text" rows="3" required></textarea>
+      </label>
+      <button type="submit">Добавить комментарий</button>
+    </form>
+  </details>
 </section>
 
 <section class="card">
@@ -156,7 +95,7 @@
       {% for file in files %}
         <li>
           <a href="/files/{{ file.id }}">{{ file.title }}</a>
-          <span class="muted">{{ file.kind }} · {{ file.size }} · {{ file.created_at }}</span>
+          <span class="muted">{{ file.label }} · {{ file.size }} · {{ file.created_at }}</span>
         </li>
       {% endfor %}
     </ul>
@@ -177,7 +116,7 @@
           <option value="code">Код</option>
         </select>
       </label>
-      <button type="submit">Загрузить</button>
+      <button type="submit">Загрузить файл</button>
     </form>
   </details>
 </section>
@@ -190,7 +129,7 @@
     <ol class="events">
       {% for event in events %}
         <li>
-          <span class="kind">{{ event.kind }}</span>
+          {{ event.label }}
           <span class="muted">{{ event.actor }} · {{ event.at }}</span>
         </li>
       {% endfor %}
@@ -198,20 +137,86 @@
   {% endif %}
 </section>
 
-<section class="card">
-  <h2>Комментарии</h2>
-  {% if comments.is_empty() %}
-    <p class="muted">Комментариев пока нет.</p>
-  {% else %}
-    {% for comment in comments %}
-      <article class="comment">
-        <header>
-          <strong>{{ comment.author }}</strong>
-          <span class="muted">{{ comment.created_at }}</span>
-        </header>
-        <p>{{ comment.body }}</p>
-      </article>
-    {% endfor %}
+<section class="card actions">
+  <h2>Действия</h2>
+
+  {% if task.status_kind != "done" %}
+    <details>
+      <summary>Закрыть задачу</summary>
+      <p class="muted">Задача закроется без возврата. Вернуть её можно кнопкой «Переоткрыть».</p>
+      <form class="inline-form" method="post" action="/tasks/{{ task.number }}/close">
+        <button type="submit" class="danger">Закрыть задачу</button>
+      </form>
+    </details>
+  {% endif %}
+
+  <details>
+    <summary>Изменить название или постановку</summary>
+    <form class="form" method="post" action="/tasks/{{ task.number }}/update">
+      <label>Название
+        <input name="title" value="{{ task.title }}">
+      </label>
+      <label>Постановка
+        <textarea name="statement" rows="4">{{ task.statement }}</textarea>
+      </label>
+      <button type="submit">Сохранить изменения</button>
+    </form>
+  </details>
+
+  <details>
+    <summary>Сменить статус</summary>
+    <form class="form" method="post" action="/tasks/{{ task.number }}/status">
+      <label>Статус
+        <select name="status">
+          {% for status in statuses %}
+            <option value="{{ status.id }}" {% if status.id == task.status_id %}selected{% endif %}>{{ status.title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">Сменить статус</button>
+    </form>
+  </details>
+
+  {% if task.status_kind == "new" || task.status_kind == "active" %}
+    <details>
+      <summary>Остановить или поставить в ожидание</summary>
+      <form class="form" method="post" action="/tasks/{{ task.number }}/block">
+        <label>Причина
+          <textarea name="reason" rows="2" required></textarea>
+        </label>
+        <label>Ждём кого
+          <input name="waiting_for" placeholder="человек или роль">
+        </label>
+        <label>Ссылка
+          <input name="waiting_ref">
+        </label>
+        <button type="submit">Остановить задачу</button>
+      </form>
+    </details>
+  {% endif %}
+
+  {% if task.status_kind == "blocked" || task.status_kind == "waiting" %}
+    <details>
+      <summary>Возобновить</summary>
+      <form class="form" method="post" action="/tasks/{{ task.number }}/resume">
+        <label>Причина
+          <input name="reason" required>
+        </label>
+        <button type="submit">Возобновить задачу</button>
+      </form>
+    </details>
+  {% endif %}
+
+  {% if task.status_kind == "done" %}
+    <details>
+      <summary>Переоткрыть</summary>
+      <form class="form" method="post" action="/tasks/{{ task.number }}/reopen">
+        <label>Причина
+          <input name="reason" required>
+        </label>
+        <button type="submit">Переоткрыть задачу</button>
+      </form>
+    </details>
   {% endif %}
 </section>
 {% endblock %}

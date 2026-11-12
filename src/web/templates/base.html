@@ -11,11 +11,11 @@
     <a class="brand" href="/">PithosPandoras</a>
     <span class="workspace">{{ workspace }}</span>
     <nav class="nav">
-      <a href="/">Доска</a>
-      <a href="/search">Поиск</a>
-      <a href="/stats">Статистика</a>
-      <a href="/workspaces">Пространства</a>
-      <a href="/settings">Настройки</a>
+      <a href="/" {% if current == "board" %}aria-current="page"{% endif %}>Доска</a>
+      <a href="/search" {% if current == "search" %}aria-current="page"{% endif %}>Поиск</a>
+      <a href="/stats" {% if current == "stats" %}aria-current="page"{% endif %}>Статистика</a>
+      <a href="/workspaces" {% if current == "workspaces" %}aria-current="page"{% endif %}>Пространства</a>
+      <a href="/settings" {% if current == "settings" %}aria-current="page"{% endif %}>Настройки</a>
     </nav>
   </header>
   <main class="page">
