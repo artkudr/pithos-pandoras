@@ -23,17 +23,17 @@
         <td class="act-col"></td>
         <td colspan="3">
           <form class="form" method="post" action="/projects/create">
-            <div class="form-row">
-              <label>Название проекта
-                <input name="name" required>
-              </label>
-              <label>Корень проекта
-                <input name="root_path" value="." required>
-              </label>
+            <div class="form-line">
+              <input name="name" placeholder="Название проекта" aria-label="Название проекта" required>
+              <div class="form-actions">
+                <button type="submit" class="form-ok" title="Создать проект" aria-label="Создать проект"><svg class="icon"><use href="#icon-check"></use></svg></button>
+                <button type="button" class="form-cancel" data-toggle="create-project" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+              </div>
             </div>
-            <details>
-              <summary>Дополнительно</summary>
-              <div class="form-row">
+            <label>Корень проекта
+              <input name="root_path" value="." required>
+            </label>
+            <div class="form-row">
                 <label>Папка задач
                   <input name="tasks_dir" value="Задачи" required>
                 </label>
@@ -134,13 +134,8 @@
                   <textarea class="code-input" name="config_json" rows="6">{}</textarea>
                 </label>
               </div>
-              <input type="hidden" name="roles_json" id="roles-json" value="">
-              <input type="hidden" name="roles" value="Коммандер,Исполнитель,Проверяющий">
-            </details>
-            <div class="form-actions">
-              <button type="submit" class="form-ok" title="Создать проект" aria-label="Создать проект"><svg class="icon"><use href="#icon-check"></use></svg></button>
-              <button type="button" class="form-cancel" data-toggle="create-project" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
-            </div>
+            <input type="hidden" name="roles_json" id="roles-json" value="">
+            <input type="hidden" name="roles" value="Коммандер,Исполнитель,Проверяющий">
           </form>
         </td>
       </tr>

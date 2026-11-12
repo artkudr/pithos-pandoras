@@ -26,15 +26,17 @@
         <td class="act-col"></td>
         <td colspan="6">
           <form class="form" method="post" action="/tasks">
-            <input name="title" placeholder="Название" aria-label="Название" required>
+            <div class="form-line">
+              <input name="title" placeholder="Название" aria-label="Название" required>
+              <div class="form-actions">
+                <button type="submit" class="form-ok" title="Создать задачу" aria-label="Создать задачу"><svg class="icon"><use href="#icon-check"></use></svg></button>
+                <button type="button" class="form-cancel" data-toggle="create-task" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+              </div>
+            </div>
             <textarea name="statement" rows="3" placeholder="Постановка" aria-label="Постановка" required></textarea>
             <div class="form-row">
               <input name="route" placeholder="Маршрут: например, полный" aria-label="Маршрут">
               <input name="resource" placeholder="Ресурс: например, backend" aria-label="Ресурс">
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="form-ok" title="Создать задачу" aria-label="Создать задачу"><svg class="icon"><use href="#icon-check"></use></svg></button>
-              <button type="button" class="form-cancel" data-toggle="create-task" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
             </div>
           </form>
         </td>

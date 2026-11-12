@@ -59,8 +59,10 @@
               </div>
               <input type="hidden" name="color" value="#5c7cfa">
             </div>
-            <button type="submit" class="form-ok" title="Добавить роль" aria-label="Добавить роль"><svg class="icon"><use href="#icon-check"></use></svg></button>
-            <button type="button" class="form-cancel" data-toggle="create-role" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+            <div class="form-actions">
+              <button type="submit" class="form-ok" title="Добавить роль" aria-label="Добавить роль"><svg class="icon"><use href="#icon-check"></use></svg></button>
+              <button type="button" class="form-cancel" data-toggle="create-role" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+            </div>
           </form>
         </td>
       </tr>
@@ -95,8 +97,10 @@
                   </div>
                   <input type="hidden" name="color" value="{% if role.color.is_empty() %}#5c7cfa{% else %}{{ role.color }}{% endif %}">
                 </div>
-                <button type="submit" class="form-ok" title="Сохранить цвет" aria-label="Сохранить цвет"><svg class="icon"><use href="#icon-check"></use></svg></button>
-                <button type="button" class="form-cancel" data-toggle="edit-role-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+                <div class="form-actions">
+                  <button type="submit" class="form-ok" title="Сохранить цвет" aria-label="Сохранить цвет"><svg class="icon"><use href="#icon-check"></use></svg></button>
+                  <button type="button" class="form-cancel" data-toggle="edit-role-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+                </div>
               </form>
             </td>
           </tr>
