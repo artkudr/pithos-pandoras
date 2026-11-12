@@ -27,13 +27,7 @@ pub fn format_rfc3339(value: OffsetDateTime) -> String {
 }
 
 pub fn local_date() -> String {
-    let now = OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc());
-    format!(
-        "{:04}-{:02}-{:02}",
-        now.year(),
-        now.month() as u8,
-        now.day()
-    )
+    chrono::Local::now().format("%Y-%m-%d").to_string()
 }
 
 pub fn folder_name(pattern: &str, number: i64, date: &str) -> String {

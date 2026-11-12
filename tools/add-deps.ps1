@@ -18,6 +18,7 @@ try {
     cargo add pulldown-cmark
     cargo add ammonia
     cargo add mime_guess
+    cargo add chrono --features clock
     cargo add serde --features derive
     cargo add serde_json
     cargo add tracing

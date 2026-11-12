@@ -135,15 +135,15 @@ async fn task_page(
             status_id,
             status_kind,
             folder_name: data.task.folder_name,
-            created_at: data.task.created_at,
-            updated_at: data.task.updated_at,
+            created_at: format_local_time(&data.task.created_at),
+            updated_at: format_local_time(&data.task.updated_at),
         },
         statuses,
         folder_missing,
         current_stage: data.current_stage.map(|stage| StageView {
             role: stage.role,
             round: stage.round,
-            started_at: stage.started_at,
+            started_at: format_local_time(&stage.started_at),
         }),
         reports: data
             .reports
@@ -152,7 +152,7 @@ async fn task_page(
                 kind: item.report.kind,
                 title: item.report.title,
                 role: item.role,
-                created_at: item.report.created_at,
+                created_at: format_local_time(&item.report.created_at),
                 html: render_markdown(&item.report.content),
             })
             .collect(),
@@ -164,7 +164,7 @@ async fn task_page(
                 title: file.title,
                 kind: file.kind,
                 size: file.size.map(format_size).unwrap_or_default(),
-                created_at: file.created_at,
+                created_at: format_local_time(&file.created_at),
             })
             .collect(),
         comments: data
@@ -173,7 +173,7 @@ async fn task_page(
             .map(|comment| CommentView {
                 author: comment.author,
                 body: comment.body,
-                created_at: comment.created_at,
+                created_at: format_local_time(&comment.created_at),
             })
             .collect(),
         events: data
@@ -182,7 +182,7 @@ async fn task_page(
             .map(|event| EventView {
                 kind: event.kind,
                 actor: event.actor.unwrap_or_else(|| String::from("—")),
-                at: event.at,
+                at: format_local_time(&event.at),
             })
             .collect(),
         warnings: data.warnings.into_iter().map(warning_text).collect(),
@@ -534,7 +534,7 @@ fn board_task_view(task: TaskListItem) -> BoardTaskView {
         } else {
             task.waiting_for
         },
-        updated_at: task.updated_at,
+        updated_at: format_local_time(&task.updated_at),
     }
 }
 
@@ -600,6 +600,16 @@ fn format_size(size: i64) -> String {
         format!("{:.1} КБ", size as f64 / 1024.0)
     } else {
         format!("{:.1} МБ", size as f64 / (1024.0 * 1024.0))
+    }
+}
+
+fn format_local_time(value: &str) -> String {
+    match chrono::DateTime::parse_from_rfc3339(value) {
+        Ok(parsed) => parsed
+            .with_timezone(&chrono::Local)
+            .format("%Y-%m-%d %H:%M:%S %:z")
+            .to_string(),
+        Err(_) => value.to_string(),
     }
 }
 
