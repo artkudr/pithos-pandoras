@@ -51,7 +51,7 @@ tools/index.ps1 affected "Symbol" -Depth 3
 ```
 
 Точные строки, тексты ошибок и ключи конфигов — `rg`. После крупных правок —
-`tools/index.ps1 update`.
+`tools/index.ps1 update`. После коммита граф обновляет git-хук graphify.
 
 ## Сервис задач
 
