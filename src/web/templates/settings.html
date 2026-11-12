@@ -35,7 +35,7 @@
     <table class="board">
       <thead>
         <tr>
-          <th class="add-col">
+          <th class="act-col">
             <button type="button" class="add-button" data-toggle="create-role" aria-expanded="false" aria-controls="create-role" title="Добавить роль" aria-label="Добавить роль">+</button>
             <span class="sr-only">Действие</span>
           </th>
@@ -66,7 +66,7 @@
         {% else %}
           {% for role in roles %}
             <tr>
-              <td class="edit-col">
+              <td class="act-col">
                 <button type="button" class="row-edit" data-toggle="edit-role-{{ loop.index }}" aria-expanded="false" aria-controls="edit-role-{{ loop.index }}" title="Изменить роль" aria-label="Изменить роль {{ role.name }}">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="3"></circle>
@@ -105,17 +105,18 @@
     <table class="board">
       <thead>
         <tr>
-          <th class="add-col">
-            <button type="button" class="add-button" data-toggle="create-status" aria-expanded="false" aria-controls="create-status" title="Добавить или изменить статус" aria-label="Добавить или изменить статус">+</button>
-            <span class="sr-only">ID</span>
+          <th class="act-col">
+            <button type="button" class="add-button" data-toggle="create-status" aria-expanded="false" aria-controls="create-status" title="Добавить статус" aria-label="Добавить статус">+</button>
+            <span class="sr-only">Действие</span>
           </th>
+          <th>ID</th>
           <th>Название</th>
           <th>Тип</th>
         </tr>
       </thead>
       <tbody>
         <tr class="create-row" id="create-status" hidden>
-          <td colspan="3">
+          <td colspan="4">
             <form class="form" method="post" action="/settings/statuses">
               <div class="form-row">
                 <label>ID
@@ -148,9 +149,44 @@
         </tr>
         {% for status in statuses %}
           <tr>
+            <td class="act-col">
+              <button type="button" class="row-edit" data-toggle="edit-status-{{ loop.index }}" aria-expanded="false" aria-controls="edit-status-{{ loop.index }}" title="Изменить статус" aria-label="Изменить статус {{ status.title }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+              </button>
+            </td>
             <td><code>{{ status.id }}</code></td>
             <td><span class="cell-status"><span class="dot" style="--dot: {{ status.color }}" aria-hidden="true"></span>{{ status.title }}</span></td>
             <td>{{ status.kind_label }}</td>
+          </tr>
+          <tr class="create-row" id="edit-status-{{ loop.index }}" hidden>
+            <td colspan="4">
+              <form class="form" method="post" action="/settings/statuses">
+                <input type="hidden" name="id" value="{{ status.id }}">
+                <div class="form-row">
+                  <label>Название
+                    <input name="title" value="{{ status.title }}" required>
+                  </label>
+                  <label>Тип
+                    <select name="kind">
+                      <option value="active" {% if status.kind == "active" %}selected{% endif %}>в работе</option>
+                      <option value="waiting" {% if status.kind == "waiting" %}selected{% endif %}>ожидание</option>
+                      <option value="blocked" {% if status.kind == "blocked" %}selected{% endif %}>остановлена</option>
+                      <option value="done" {% if status.kind == "done" %}selected{% endif %}>закрыта</option>
+                    </select>
+                  </label>
+                </div>
+                <label>Сортировка
+                  <input name="sort" type="number" value="{{ status.sort }}">
+                </label>
+                <div class="form-actions">
+                  <button type="submit">Сохранить статус</button>
+                  <button type="button" class="ghost" data-toggle="edit-status-{{ loop.index }}">Отменить</button>
+                </div>
+              </form>
+            </td>
           </tr>
         {% endfor %}
       </tbody>

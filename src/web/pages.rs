@@ -540,7 +540,9 @@ async fn settings(
                 SettingsStatusView {
                     id: status.id,
                     title: status.title,
+                    kind: status.kind.clone(),
                     kind_label: status_kind_label(&status.kind).to_string(),
+                    sort: status.sort,
                     color,
                 }
             })
@@ -1174,7 +1176,9 @@ struct RoleTimeView {
 struct SettingsStatusView {
     id: String,
     title: String,
+    kind: String,
     kind_label: String,
+    sort: i64,
     color: String,
 }
 struct WebError {

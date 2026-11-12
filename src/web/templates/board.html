@@ -9,10 +9,11 @@
   <table class="board">
     <thead>
       <tr>
-        <th class="add-col">
+        <th class="act-col">
           <button type="button" class="add-button" data-toggle="create-task" aria-expanded="false" aria-controls="create-task" title="Новая задача" aria-label="Новая задача">+</button>
-          <span class="sr-only">№</span>
+          <span class="sr-only">Действие</span>
         </th>
+        <th>№</th>
         <th>Задача</th>
         <th>Статус</th>
         <th>Текущая роль</th>
@@ -22,7 +23,7 @@
     </thead>
     <tbody>
       <tr class="create-row" id="create-task" hidden>
-        <td colspan="6">
+        <td colspan="7">
           <form class="form" method="post" action="/tasks">
             <label>Название
               <input name="title" required>
@@ -47,11 +48,12 @@
       </tr>
       {% if tasks.is_empty() %}
         <tr>
-          <td colspan="6" class="muted">Задач пока нет. Нажмите «+», чтобы создать первую.</td>
+          <td colspan="7" class="muted">Задач пока нет. Нажмите «+», чтобы создать первую.</td>
         </tr>
       {% else %}
         {% for task in tasks %}
           <tr>
+            <td class="act-col"></td>
             <td class="num">{{ task.number }}</td>
             <td><a href="/tasks/{{ task.number }}">{{ task.title }}</a></td>
             <td><span class="status-chip"><span class="dot" style="--dot: {{ task.status_color }}" aria-hidden="true"></span>{{ task.status }}</span></td>

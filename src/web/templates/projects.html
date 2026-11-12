@@ -9,9 +9,9 @@
   <table class="board">
     <thead>
       <tr>
-        <th class="add-col">
+        <th class="act-col">
           <button type="button" class="add-button" data-toggle="create-project" aria-expanded="false" aria-controls="create-project" title="Новый проект" aria-label="Новый проект">+</button>
-          <span class="sr-only">Текущий</span>
+          <span class="sr-only">Действие</span>
         </th>
         <th>Проект</th>
         <th>Корень</th>
@@ -41,29 +41,30 @@
               <div class="create-columns">
                 <div>
                   <p class="field-label">Роли</p>
-                  <table class="roles-editor" id="roles-editor">
+                  <table class="board" id="roles-editor">
                     <thead>
                       <tr>
-                        <th class="add-col">
+                        <th class="act-col">
                           <button type="button" class="add-button" data-add-role title="Добавить роль" aria-label="Добавить роль">+</button>
+                          <span class="sr-only">Действие</span>
                         </th>
-                        <th>Название</th>
+                        <th>Роль</th>
                         <th>Цвет</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td class="edit-col"></td>
+                        <td class="act-col"></td>
                         <td><input name="role_name" value="Коммандер" aria-label="Название роли"></td>
                         <td><input type="color" name="role_color" value="#5c7cfa" aria-label="Цвет роли"></td>
                       </tr>
                       <tr>
-                        <td class="edit-col"></td>
+                        <td class="act-col"></td>
                         <td><input name="role_name" value="Исполнитель" aria-label="Название роли"></td>
                         <td><input type="color" name="role_color" value="#e8890c" aria-label="Цвет роли"></td>
                       </tr>
                       <tr>
-                        <td class="edit-col"></td>
+                        <td class="act-col"></td>
                         <td><input name="role_name" value="Проверяющий" aria-label="Название роли"></td>
                         <td><input type="color" name="role_color" value="#2f9e44" aria-label="Цвет роли"></td>
                       </tr>
@@ -71,7 +72,7 @@
                   </table>
                   <template id="role-row-template">
                     <tr>
-                      <td class="edit-col"></td>
+                      <td class="act-col"></td>
                       <td><input name="role_name" placeholder="например, Оракул" aria-label="Название роли"></td>
                       <td><input type="color" name="role_color" value="#868e96" aria-label="Цвет роли"></td>
                     </tr>
@@ -98,21 +99,20 @@
       {% endif %}
       {% for item in projects %}
         <tr>
-          <td class="mark-col">
-            {% if item.name == selected %}
-              <span class="dot dot-current" aria-hidden="true"></span>
-              <span class="sr-only">Текущий проект</span>
-            {% endif %}
-          </td>
+          <td class="act-col"></td>
           <td>
-            {% if item.name == selected %}
-              {{ item.name }}
-            {% else %}
-              <form class="inline-form" method="post" action="/projects/select">
-                <input type="hidden" name="name" value="{{ item.name }}">
-                <button type="submit" class="link-button" aria-label="Выбрать проект {{ item.name }}">{{ item.name }}</button>
-              </form>
-            {% endif %}
+            <div class="cell-status">
+              {% if item.name == selected %}
+                <span class="dot dot-current" aria-hidden="true"></span>
+                {{ item.name }}
+                <span class="sr-only">— текущий проект</span>
+              {% else %}
+                <form class="inline-form" method="post" action="/projects/select">
+                  <input type="hidden" name="name" value="{{ item.name }}">
+                  <button type="submit" class="link-button" aria-label="Выбрать проект {{ item.name }}">{{ item.name }}</button>
+                </form>
+              {% endif %}
+            </div>
           </td>
           <td class="path">{{ item.root_path }}</td>
           <td>

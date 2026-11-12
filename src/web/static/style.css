@@ -201,10 +201,10 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 
-.add-col {
-  width: 44px;
-  padding-left: 9px;
-  padding-right: 9px;
+.act-col {
+  width: 38px;
+  padding-left: 6px;
+  padding-right: 6px;
   text-align: center;
 }
 
@@ -268,32 +268,9 @@ h3 {
   color: var(--muted);
 }
 
-.roles-editor {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.roles-editor th {
-  padding: 4px 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
-  text-align: left;
-}
-
-.roles-editor td {
-  padding: 3px 8px;
-}
-
-.roles-editor input[type="color"] {
+.board input[type="color"] {
   width: 44px;
   padding: 2px;
-}
-
-.edit-col {
-  width: 34px;
-  padding-left: 0;
-  text-align: center;
 }
 
 .row-edit {
