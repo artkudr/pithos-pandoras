@@ -17,7 +17,7 @@
     </thead>
     <tbody>
       {% for item in projects %}
-        <tr{% if item.name == selected %} class="is-current"{% endif %}>
+        <tr>
           <td class="mark-col">
             {% if item.name == selected %}
               <span class="dot dot-current" aria-hidden="true"></span>
