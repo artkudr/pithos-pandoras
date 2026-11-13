@@ -12,8 +12,8 @@ use serde::Deserialize;
 
 use crate::domain::{AppError, ErrorCode, TaskListItem};
 use crate::service::{
-    FileAddRequest, Service, TaskBlockRequest, TaskCloseRequest, TaskNoteRequest,
-    TaskReopenRequest, TaskResumeRequest, TaskSetStatusRequest, TaskUpdateRequest, HUMAN_ACTOR,
+    FileAddRequest, Service, TaskBlockRequest, TaskNoteRequest, TaskReopenRequest,
+    TaskResumeRequest, TaskSetStatusRequest, TaskUpdateRequest, HUMAN_ACTOR,
 };
 use crate::web::live::Live;
 
@@ -49,7 +49,6 @@ pub fn router(service: Arc<Service>, project: String, live: Live) -> axum::Route
         .route("/tasks/{number}", get(task_page))
         .route("/tasks/{number}/note", post(add_note))
         .route("/tasks/{number}/status", post(set_status))
-        .route("/tasks/{number}/close", post(close_task))
         .route("/tasks/{number}/block", post(block_task))
         .route("/tasks/{number}/resume", post(resume_task))
         .route("/tasks/{number}/reopen", post(reopen_task))
@@ -255,22 +254,6 @@ async fn set_status(
             task: Some(number.to_string()),
             role: Some(String::from(HUMAN_ACTOR)),
             status: Some(form.status),
-        })
-        .await?;
-    Ok(Redirect::to(&format!("/tasks/{number}")))
-}
-
-async fn close_task(
-    State(state): State<AppState>,
-    Path(number): Path<i64>,
-) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
-    state
-        .service
-        .task_close(TaskCloseRequest {
-            project: Some(project.clone()),
-            task: Some(number.to_string()),
-            role: Some(String::from(HUMAN_ACTOR)),
         })
         .await?;
     Ok(Redirect::to(&format!("/tasks/{number}")))

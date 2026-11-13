@@ -5,7 +5,19 @@
 {% block content %}
 <header class="task-head">
   <h1><span class="num">{{ task.number }}</span> {{ task.title }}</h1>
-  <span class="status" style="color: {{ task.status_color }}">{{ task.status }}</span>
+  <div class="task-head-tools">
+    <span class="status-chip" style="color: {{ task.status_color }}">{{ task.status }}</span>
+    {% if task.status_kind != "done" %}
+      <form class="task-status" method="post" action="/tasks/{{ task.number }}/status">
+        <select name="status" aria-label="Статус">
+          {% for status in statuses %}
+            <option value="{{ status.id }}" {% if status.id == task.status_id %}selected{% endif %}>{{ status.title }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="form-ok" title="Сменить статус" aria-label="Сменить статус"><svg class="icon"><use href="#icon-check"></use></svg></button>
+      </form>
+    {% endif %}
+  </div>
 </header>
 
 {% if !warnings.is_empty() %}
@@ -88,67 +100,99 @@
       <button type="submit">Создать папку задачи</button>
     </form>
   {% endif %}
-  {% if files.is_empty() %}
-    <p class="muted">Файлов пока нет.</p>
-  {% else %}
-    <ul class="files">
-      {% for file in files %}
-        <li>
-          <a href="/files/{{ file.id }}">{{ file.title }}</a>
-          <span class="muted">{{ file.label }} · {{ file.size }} · {{ file.created_at }}</span>
-        </li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-  <details>
-    <summary>Прикрепить файл</summary>
-    <form class="form" method="post" action="/tasks/{{ task.number }}/files" enctype="multipart/form-data">
-      <label>Файл
-        <input type="file" name="file" required>
-      </label>
-      <label>Название
-        <input name="title">
-      </label>
-      <label>Тип
-        <select name="kind">
-          <option value="file">Файл</option>
-          <option value="image">Картинка</option>
-          <option value="code">Код</option>
-        </select>
-      </label>
-      <button type="submit">Загрузить файл</button>
-    </form>
-  </details>
+  <div class="table-wrap">
+    <table class="board">
+      <thead>
+        <tr>
+          <th class="act-col">
+            <button type="button" class="add-button" data-toggle="create-file" aria-expanded="false" aria-controls="create-file" title="Прикрепить файл" aria-label="Прикрепить файл"><svg class="icon"><use href="#icon-plus"></use></svg></button>
+            <span class="sr-only">Действие</span>
+          </th>
+          <th>Название</th>
+          <th>Тип</th>
+          <th class="cell-num">Размер</th>
+          <th>Создан</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="create-row" id="create-file" hidden>
+          <td class="act-col"></td>
+          <td colspan="4">
+            <form class="form" method="post" action="/tasks/{{ task.number }}/files" enctype="multipart/form-data">
+              <label>Файл
+                <input type="file" name="file" required>
+              </label>
+              <div class="form-row">
+                <label>Название
+                  <input name="title">
+                </label>
+                <label>Тип
+                  <select name="kind">
+                    <option value="file">Файл</option>
+                    <option value="image">Картинка</option>
+                    <option value="code">Код</option>
+                  </select>
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="form-ok" title="Загрузить файл" aria-label="Загрузить файл"><svg class="icon"><use href="#icon-check"></use></svg></button>
+                <button type="button" class="form-cancel" data-toggle="create-file" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        {% if files.is_empty() %}
+          <tr>
+            <td colspan="5" class="muted">Файлов пока нет. Нажмите «+», чтобы прикрепить.</td>
+          </tr>
+        {% else %}
+          {% for file in files %}
+            <tr>
+              <td class="act-col"></td>
+              <td><a class="task-link" href="/files/{{ file.id }}">{{ file.title }}</a></td>
+              <td>{{ file.label }}</td>
+              <td class="cell-num">{% if file.size.is_empty() %}—{% else %}{{ file.size }}{% endif %}</td>
+              <td class="muted nowrap">{{ file.created_at }}</td>
+            </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <section class="card">
   <h2>История</h2>
-  {% if events.is_empty() %}
-    <p class="muted">Событий пока нет.</p>
-  {% else %}
-    <ol class="events">
-      {% for event in events %}
-        <li>
-          {{ event.label }}
-          <span class="muted">{{ event.actor }} · {{ event.at }}</span>
-        </li>
-      {% endfor %}
-    </ol>
-  {% endif %}
+  <div class="table-wrap">
+    <table class="board">
+      <thead>
+        <tr>
+          <th>Событие</th>
+          <th>Кто</th>
+          <th>Когда</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if events.is_empty() %}
+          <tr>
+            <td colspan="3" class="muted">Событий пока нет.</td>
+          </tr>
+        {% else %}
+          {% for event in events %}
+            <tr>
+              <td>{{ event.label }}</td>
+              <td class="muted">{{ event.actor }}</td>
+              <td class="muted nowrap">{{ event.at }}</td>
+            </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <section class="card actions">
   <h2>Действия</h2>
-
-  {% if task.status_kind != "done" %}
-    <details>
-      <summary>Закрыть задачу</summary>
-      <p class="muted">Задача закроется без возврата. Вернуть её можно кнопкой «Переоткрыть».</p>
-      <form class="inline-form" method="post" action="/tasks/{{ task.number }}/close">
-        <button type="submit" class="danger">Закрыть задачу</button>
-      </form>
-    </details>
-  {% endif %}
 
   <details>
     <summary>Изменить название или постановку</summary>
@@ -160,20 +204,6 @@
         <textarea name="statement" rows="4">{{ task.statement }}</textarea>
       </label>
       <button type="submit">Сохранить изменения</button>
-    </form>
-  </details>
-
-  <details>
-    <summary>Сменить статус</summary>
-    <form class="form" method="post" action="/tasks/{{ task.number }}/status">
-      <label>Статус
-        <select name="status">
-          {% for status in statuses %}
-            <option value="{{ status.id }}" {% if status.id == task.status_id %}selected{% endif %}>{{ status.title }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <button type="submit">Сменить статус</button>
     </form>
   </details>
 
