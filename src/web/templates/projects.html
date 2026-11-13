@@ -23,13 +23,7 @@
         <td class="act-col"></td>
         <td colspan="3">
           <form class="form" method="post" action="/projects/create">
-            <div class="form-line">
-              <input name="name" placeholder="Название проекта" aria-label="Название проекта" required>
-              <div class="form-actions">
-                <button type="submit" class="form-ok" title="Создать проект" aria-label="Создать проект"><svg class="icon"><use href="#icon-check"></use></svg></button>
-                <button type="button" class="form-cancel" data-toggle="create-project" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
-              </div>
-            </div>
+            <input name="name" placeholder="Название проекта" aria-label="Название проекта" required>
             <label>Корень проекта
               <input name="root_path" value="." required>
             </label>
@@ -86,6 +80,10 @@
                   <textarea class="code-input" name="config_json" rows="6">{}</textarea>
                 </label>
               </div>
+            <div class="form-actions">
+              <button type="submit" class="form-ok" title="Создать проект" aria-label="Создать проект"><svg class="icon"><use href="#icon-check"></use></svg></button>
+              <button type="button" class="form-cancel" data-toggle="create-project" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+            </div>
           </form>
         </td>
       </tr>
