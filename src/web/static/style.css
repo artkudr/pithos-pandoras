@@ -665,6 +665,7 @@ h3 {
 
 .statement {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   margin: 0 0 14px;
 }
 
@@ -726,6 +727,7 @@ h3 {
 
 .comment-text {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 
