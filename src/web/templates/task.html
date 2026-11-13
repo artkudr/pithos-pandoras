@@ -115,74 +115,63 @@
   </div>
 </section>
 
-<section class="card">
-  <h2>Файлы</h2>
-  {% if folder_missing %}
-    <p class="muted">Папка задачи ещё не создана.</p>
-    <form class="inline-form" method="post" action="/tasks/{{ task.number }}/folder">
-      <button type="submit">Создать папку задачи</button>
-    </form>
-  {% endif %}
-  <div class="table-wrap">
-    <table class="board">
-      <thead>
+<h2 class="sr-only">Файлы</h2>
+{% if folder_missing %}
+  <p class="muted">Папка задачи ещё не создана.</p>
+  <form class="inline-form" method="post" action="/tasks/{{ task.number }}/folder">
+    <button type="submit">Создать папку задачи</button>
+  </form>
+{% endif %}
+<div class="table-wrap">
+  <table class="board">
+    <thead>
+      <tr>
+        <th class="act-col">
+          <button type="button" class="add-button" data-toggle="create-file" aria-expanded="false" aria-controls="create-file" title="Прикрепить файл" aria-label="Прикрепить файл"><svg class="icon"><use href="#icon-plus"></use></svg></button>
+          <span class="sr-only">Действие</span>
+        </th>
+        <th>Файл</th>
+        <th>Комментарий</th>
+        <th class="cell-num">Размер</th>
+        <th>Создан</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="create-row" id="create-file" hidden>
+        <td class="act-col"></td>
+        <td colspan="4">
+          <form class="form" method="post" action="/tasks/{{ task.number }}/files" enctype="multipart/form-data">
+            <label>Файл
+              <input type="file" name="file" required>
+            </label>
+            <label>Комментарий
+              <input name="title" placeholder="например, для обновления">
+            </label>
+            <div class="form-actions">
+              <button type="submit" class="form-ok" title="Загрузить файл" aria-label="Загрузить файл"><svg class="icon"><use href="#icon-check"></use></svg></button>
+              <button type="button" class="form-cancel" data-toggle="create-file" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% if files.is_empty() %}
         <tr>
-          <th class="act-col">
-            <button type="button" class="add-button" data-toggle="create-file" aria-expanded="false" aria-controls="create-file" title="Прикрепить файл" aria-label="Прикрепить файл"><svg class="icon"><use href="#icon-plus"></use></svg></button>
-            <span class="sr-only">Действие</span>
-          </th>
-          <th>Название</th>
-          <th>Тип</th>
-          <th class="cell-num">Размер</th>
-          <th>Создан</th>
+          <td colspan="5" class="muted">Файлов пока нет. Нажмите «+», чтобы прикрепить.</td>
         </tr>
-      </thead>
-      <tbody>
-        <tr class="create-row" id="create-file" hidden>
-          <td class="act-col"></td>
-          <td colspan="4">
-            <form class="form" method="post" action="/tasks/{{ task.number }}/files" enctype="multipart/form-data">
-              <label>Файл
-                <input type="file" name="file" required>
-              </label>
-              <div class="form-row">
-                <label>Название
-                  <input name="title">
-                </label>
-                <label>Тип
-                  <select name="kind">
-                    <option value="file">Файл</option>
-                    <option value="image">Картинка</option>
-                    <option value="code">Код</option>
-                  </select>
-                </label>
-              </div>
-              <div class="form-actions">
-                <button type="submit" class="form-ok" title="Загрузить файл" aria-label="Загрузить файл"><svg class="icon"><use href="#icon-check"></use></svg></button>
-                <button type="button" class="form-cancel" data-toggle="create-file" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
-              </div>
-            </form>
-          </td>
-        </tr>
-        {% if files.is_empty() %}
+      {% else %}
+        {% for file in files %}
           <tr>
-            <td colspan="5" class="muted">Файлов пока нет. Нажмите «+», чтобы прикрепить.</td>
+            <td class="act-col"></td>
+            <td><a class="task-link" href="/files/{{ file.id }}">{{ file.name }}</a></td>
+            <td>{% if file.comment.is_empty() %}—{% else %}{{ file.comment }}{% endif %}</td>
+            <td class="cell-num">{% if file.size.is_empty() %}—{% else %}{{ file.size }}{% endif %}</td>
+            <td class="muted nowrap">{{ file.created_at }}</td>
           </tr>
-        {% else %}
-          {% for file in files %}
-            <tr>
-              <td class="act-col"></td>
-              <td><a class="task-link" href="/files/{{ file.id }}">{{ file.title }}</a></td>
-              <td>{{ file.label }}</td>
-              <td class="cell-num">{% if file.size.is_empty() %}—{% else %}{{ file.size }}{% endif %}</td>
-              <td class="muted nowrap">{{ file.created_at }}</td>
-            </tr>
-          {% endfor %}
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
-</section>
+        {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
 
 <section class="card">
   <h2>История</h2>

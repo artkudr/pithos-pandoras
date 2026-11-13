@@ -177,6 +177,10 @@ h3 {
   vertical-align: middle;
 }
 
+.board td {
+  overflow-wrap: anywhere;
+}
+
 .board th {
   font-size: 13px;
   color: var(--muted);

@@ -191,12 +191,19 @@ async fn task_page(
         files: data
             .files
             .into_iter()
-            .map(|file| FileView {
-                id: file.id,
-                title: file.title,
-                label: file_kind_label(&file.kind).to_string(),
-                size: file.size.map(format_size).unwrap_or_default(),
-                created_at: format_local_time(&file.created_at),
+            .map(|file| {
+                let name = std::path::Path::new(&file.path)
+                    .file_name()
+                    .and_then(|value| value.to_str())
+                    .map(str::to_string)
+                    .unwrap_or_else(|| file.title.clone());
+                FileView {
+                    id: file.id,
+                    name,
+                    comment: file.title,
+                    size: file.size.map(format_size).unwrap_or_default(),
+                    created_at: format_local_time(&file.created_at),
+                }
             })
             .collect(),
         comments: data
@@ -876,14 +883,6 @@ fn report_kind_label(kind: &str) -> &'static str {
     }
 }
 
-fn file_kind_label(kind: &str) -> &'static str {
-    match kind {
-        "image" => "картинка",
-        "code" => "код",
-        _ => "файл",
-    }
-}
-
 fn status_kind_label(kind: &str) -> &'static str {
     match kind {
         "active" => "в работе",
@@ -1169,8 +1168,8 @@ struct ReportView {
 
 struct FileView {
     id: String,
-    title: String,
-    label: String,
+    name: String,
+    comment: String,
     size: String,
     created_at: String,
 }
