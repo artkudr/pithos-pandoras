@@ -10,6 +10,7 @@ pub struct FileRecord {
     pub actor: String,
     pub kind: String,
     pub title: String,
+    pub comment: String,
     pub path: String,
     pub mime: Option<String>,
     pub size: Option<i64>,

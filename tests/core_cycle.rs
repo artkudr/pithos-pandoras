@@ -462,6 +462,7 @@ async fn file_add_stays_inside_project_root() {
             role: Some(String::from("Исполнитель")),
             path: Some(inside.to_string_lossy().to_string()),
             title: Some(String::from("Заметка")),
+            comment: None,
             kind: None,
         })
         .await
@@ -487,6 +488,7 @@ async fn file_add_stays_inside_project_root() {
             role: Some(String::from("Исполнитель")),
             path: Some(outside.to_string_lossy().to_string()),
             title: Some(String::from("Снаружи")),
+            comment: None,
             kind: None,
         })
         .await

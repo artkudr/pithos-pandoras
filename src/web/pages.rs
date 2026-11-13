@@ -200,7 +200,7 @@ async fn task_page(
                 FileView {
                     id: file.id,
                     name,
-                    comment: file.title,
+                    comment: file.comment,
                     size: file.size.map(format_size).unwrap_or_default(),
                     created_at: format_local_time(&file.created_at),
                 }
@@ -284,7 +284,7 @@ async fn upload_file(
     mut multipart: Multipart,
 ) -> Result<Redirect, WebError> {
     let project = state.current_project().await;
-    let mut title = String::new();
+    let mut comment = String::new();
     let mut kind = String::from("file");
     let mut file_name = String::from("file.bin");
     let mut bytes: Option<Vec<u8>> = None;
@@ -296,8 +296,8 @@ async fn upload_file(
     {
         let name = field.name().unwrap_or_default().to_string();
         match name.as_str() {
-            "title" => {
-                title = field
+            "comment" => {
+                comment = field
                     .text()
                     .await
                     .map_err(|err| WebError::bad_request(format!("title: {err}")))?;
@@ -342,11 +342,7 @@ async fn upload_file(
     tokio::fs::write(&path, &bytes)
         .await
         .map_err(|err| WebError::internal(format!("записать файл: {err}")))?;
-    let title = if title.trim().is_empty() {
-        file_name
-    } else {
-        title.trim().to_string()
-    };
+    let title = file_name.clone();
 
     state
         .service
@@ -356,6 +352,7 @@ async fn upload_file(
             role: Some(String::from(HUMAN_ACTOR)),
             path: Some(path.to_string_lossy().to_string()),
             title: Some(title),
+            comment: Some(comment.trim().to_string()),
             kind: Some(kind),
         })
         .await?;

@@ -169,6 +169,7 @@ pub struct FileAddRequest {
     pub role: Option<String>,
     pub path: Option<String>,
     pub title: Option<String>,
+    pub comment: Option<String>,
     pub kind: Option<String>,
 }
 
@@ -1550,6 +1551,7 @@ impl Service {
         let path = require_field(req.path.as_deref(), "path")?.to_string();
         let title = require_field(req.title.as_deref(), "title")?.to_string();
         let kind = req.kind.unwrap_or_else(|| String::from("file"));
+        let comment = req.comment.unwrap_or_default().trim().to_string();
 
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
@@ -1572,6 +1574,7 @@ impl Service {
         let role_for_write = role.clone();
         let kind_for_write = kind.clone();
         let title_for_write = title.clone();
+        let comment_for_write = comment.clone();
 
         let file = self
             .store
@@ -1585,13 +1588,18 @@ impl Service {
                     &role_for_write,
                     &kind_for_write,
                     &title_for_write,
+                    &comment_for_write,
                     &path_string,
                     None,
                     size,
                     &now,
                 )?;
-                let payload = serde_json::json!({"path": &path_string, "title": &title_for_write})
-                    .to_string();
+                let payload = serde_json::json!({
+                    "path": &path_string,
+                    "title": &title_for_write,
+                    "comment": &comment_for_write
+                })
+                .to_string();
                 events::insert_event(
                     &tx,
                     &task_id,

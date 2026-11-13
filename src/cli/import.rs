@@ -185,6 +185,7 @@ pub async fn run(store: &Store, project: &str, path: &Path) -> anyhow::Result<()
                                 "импорт",
                                 &artifact.kind,
                                 &artifact.title,
+                                "",
                                 &artifact.path,
                                 None,
                                 artifact.size,

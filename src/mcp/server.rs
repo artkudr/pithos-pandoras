@@ -190,6 +190,7 @@ pub struct FileAddArgs {
     pub role: Option<String>,
     pub path: Option<String>,
     pub title: Option<String>,
+    pub comment: Option<String>,
     pub kind: Option<String>,
 }
 
@@ -561,6 +562,7 @@ impl PithosServer {
                 role: args.role,
                 path: args.path,
                 title: args.title,
+                comment: args.comment,
                 kind: args.kind,
             })
             .await

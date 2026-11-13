@@ -6,7 +6,7 @@ use crate::domain::FileRecord;
 use super::error::StoreError;
 
 const FILE_COLUMNS: &str =
-    "id, task_id, stage_id, report_id, actor, kind, title, path, mime, size, created_at";
+    "id, task_id, stage_id, report_id, actor, kind, title, comment, path, mime, size, created_at";
 
 fn map_file(row: &rusqlite::Row<'_>) -> rusqlite::Result<FileRecord> {
     Ok(FileRecord {
@@ -17,10 +17,11 @@ fn map_file(row: &rusqlite::Row<'_>) -> rusqlite::Result<FileRecord> {
         actor: row.get(4)?,
         kind: row.get(5)?,
         title: row.get(6)?,
-        path: row.get(7)?,
-        mime: row.get(8)?,
-        size: row.get(9)?,
-        created_at: row.get(10)?,
+        comment: row.get(7)?,
+        path: row.get(8)?,
+        mime: row.get(9)?,
+        size: row.get(10)?,
+        created_at: row.get(11)?,
     })
 }
 
@@ -33,6 +34,7 @@ pub fn insert_file(
     actor: &str,
     kind: &str,
     title: &str,
+    comment: &str,
     path: &str,
     mime: Option<&str>,
     size: Option<i64>,
@@ -41,9 +43,12 @@ pub fn insert_file(
     let id = Uuid::now_v7().to_string();
     conn.execute(
         "INSERT INTO files
-         (id, task_id, stage_id, report_id, actor, kind, title, path, mime, size, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-        params![id, task_id, stage_id, report_id, actor, kind, title, path, mime, size, created_at],
+         (id, task_id, stage_id, report_id, actor, kind, title, comment, path, mime, size, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+        params![
+            id, task_id, stage_id, report_id, actor, kind, title, comment, path, mime, size,
+            created_at
+        ],
     )?;
     get_file(conn, &id)
 }
