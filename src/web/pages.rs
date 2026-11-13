@@ -21,14 +21,8 @@ use crate::web::live::Live;
 #[derive(Clone)]
 struct AppState {
     service: Arc<Service>,
-    project: Arc<tokio::sync::RwLock<String>>,
+    default_project: String,
     live: Live,
-}
-
-impl AppState {
-    async fn current_project(&self) -> String {
-        self.project.read().await.clone()
-    }
 }
 
 #[derive(RustEmbed)]
@@ -38,42 +32,54 @@ struct Assets;
 pub fn router(service: Arc<Service>, project: String, live: Live) -> axum::Router {
     let state = AppState {
         service,
-        project: Arc::new(tokio::sync::RwLock::new(project)),
+        default_project: project,
         live,
     };
     axum::Router::new()
-        .route("/", get(board))
+        .route("/", get(home))
         .route("/projects", get(projects_page))
         .route("/projects/create", post(create_project))
         .route("/projects/select", post(select_project))
-        .route("/tasks", post(create_task))
-        .route("/tasks/{number}", get(task_page))
-        .route("/tasks/{number}/note", post(add_note))
-        .route("/tasks/{number}/status", post(set_status))
-        .route("/tasks/{number}/block", post(block_task))
-        .route("/tasks/{number}/resume", post(resume_task))
-        .route("/tasks/{number}/reopen", post(reopen_task))
-        .route("/tasks/{number}/update", post(update_task))
-        .route("/tasks/{number}/folder", post(create_folder))
+        .route("/p/{project}", get(board))
+        .route("/p/{project}/tasks", post(create_task))
+        .route("/p/{project}/tasks/{number}", get(task_page))
+        .route("/p/{project}/tasks/{number}/note", post(add_note))
+        .route("/p/{project}/tasks/{number}/status", post(set_status))
+        .route("/p/{project}/tasks/{number}/block", post(block_task))
+        .route("/p/{project}/tasks/{number}/resume", post(resume_task))
+        .route("/p/{project}/tasks/{number}/reopen", post(reopen_task))
+        .route("/p/{project}/tasks/{number}/update", post(update_task))
+        .route("/p/{project}/tasks/{number}/folder", post(create_folder))
         .route(
-            "/tasks/{number}/files",
+            "/p/{project}/tasks/{number}/files",
             post(upload_file).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),
         )
-        .route("/tasks/{number}/files/{file_id}/update", post(update_file))
-        .route("/tasks/{number}/files/{file_id}/delete", post(delete_file))
-        .route("/search", get(search))
-        .route("/stats", get(stats))
-        .route("/settings", get(settings))
-        .route("/settings/roles", post(add_role))
-        .route("/settings/roles/update", post(update_role))
-        .route("/settings/roles/delete", post(delete_role))
-        .route("/settings/statuses", post(add_status))
-        .route("/settings/config", post(update_config))
-        .route("/settings/paths", post(update_paths))
+        .route(
+            "/p/{project}/tasks/{number}/files/{file_id}/update",
+            post(update_file),
+        )
+        .route(
+            "/p/{project}/tasks/{number}/files/{file_id}/delete",
+            post(delete_file),
+        )
+        .route("/p/{project}/search", get(search))
+        .route("/p/{project}/stats", get(stats))
+        .route("/p/{project}/settings", get(settings))
+        .route("/p/{project}/settings/roles", post(add_role))
+        .route("/p/{project}/settings/roles/update", post(update_role))
+        .route("/p/{project}/settings/roles/delete", post(delete_role))
+        .route("/p/{project}/settings/statuses", post(add_status))
+        .route("/p/{project}/settings/config", post(update_config))
+        .route("/p/{project}/settings/paths", post(update_paths))
         .route("/files/{file_id}", get(file))
         .route("/events", get(live_events))
         .route("/static/{*path}", get(static_file))
         .with_state(state)
+}
+
+/// `/` ведёт в проект по умолчанию: его задаёт `serve --project`.
+async fn home(State(state): State<AppState>) -> Redirect {
+    Redirect::to(&format!("/p/{}", encode_segment(&state.default_project)))
 }
 
 async fn live_events(State(state): State<AppState>) -> impl IntoResponse {
@@ -81,11 +87,14 @@ async fn live_events(State(state): State<AppState>) -> impl IntoResponse {
     ([(header::CACHE_CONTROL, "no-store")], Json(body))
 }
 
-async fn board(State(state): State<AppState>) -> Result<Html<String>, WebError> {
-    let project = state.current_project().await;
+async fn board(
+    State(state): State<AppState>,
+    Path(project): Path<String>,
+) -> Result<Html<String>, WebError> {
     let tasks = state.service.task_list(Some(project.clone())).await?;
 
     let template = BoardTemplate {
+        project_path: encode_segment(&project),
         project,
         current: "board",
         tasks: tasks.into_iter().map(board_task_view).collect(),
@@ -96,9 +105,9 @@ async fn board(State(state): State<AppState>) -> Result<Html<String>, WebError> 
 
 async fn create_task(
     State(state): State<AppState>,
+    Path(project): Path<String>,
     Form(form): Form<CreateTaskForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     let route = normalize(form.route);
     let resource = normalize(form.resource);
     let created = state
@@ -111,14 +120,17 @@ async fn create_task(
             resource.as_deref(),
         )
         .await?;
-    Ok(Redirect::to(&format!("/tasks/{}", created.task.number)))
+    Ok(Redirect::to(&format!(
+        "/p/{}/tasks/{}",
+        encode_segment(&project),
+        created.task.number
+    )))
 }
 
 async fn task_page(
     State(state): State<AppState>,
-    Path(number): Path<i64>,
+    Path((project, number)): Path<(String, i64)>,
 ) -> Result<Html<String>, WebError> {
-    let project = state.current_project().await;
     let data = state
         .service
         .task_page(Some(project.clone()), Some(number.to_string()))
@@ -157,6 +169,7 @@ async fn task_page(
         .any(|warning| warning == "folder_missing");
 
     let template = TaskTemplate {
+        project_path: encode_segment(&project),
         project: project.clone(),
         current: "board",
         task: TaskView {
@@ -231,10 +244,9 @@ async fn task_page(
 
 async fn add_note(
     State(state): State<AppState>,
-    Path(number): Path<i64>,
+    Path((project, number)): Path<(String, i64)>,
     Form(form): Form<NoteForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .task_note(TaskNoteRequest {
@@ -244,15 +256,14 @@ async fn add_note(
             text: Some(form.text),
         })
         .await?;
-    Ok(Redirect::to(&format!("/tasks/{number}")))
+    Ok(task_redirect(&project, number))
 }
 
 async fn set_status(
     State(state): State<AppState>,
-    Path(number): Path<i64>,
+    Path((project, number)): Path<(String, i64)>,
     Form(form): Form<StatusForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .task_set_status(TaskSetStatusRequest {
@@ -262,27 +273,25 @@ async fn set_status(
             status: Some(form.status),
         })
         .await?;
-    Ok(Redirect::to(&format!("/tasks/{number}")))
+    Ok(task_redirect(&project, number))
 }
 
 async fn create_folder(
     State(state): State<AppState>,
-    Path(number): Path<i64>,
+    Path((project, number)): Path<(String, i64)>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .ensure_task_folder(&project, &number.to_string())
         .await?;
-    Ok(Redirect::to(&format!("/tasks/{number}")))
+    Ok(task_redirect(&project, number))
 }
 
 async fn upload_file(
     State(state): State<AppState>,
-    Path(number): Path<i64>,
+    Path((project, number)): Path<(String, i64)>,
     mut multipart: Multipart,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     let mut comment = String::new();
     let mut kind = String::from("file");
     let mut file_name = String::from("file.bin");
@@ -356,51 +365,48 @@ async fn upload_file(
         })
         .await?;
 
-    Ok(Redirect::to(&format!("/tasks/{number}")))
+    Ok(task_redirect(&project, number))
 }
 
 async fn update_file(
     State(state): State<AppState>,
-    Path((number, file_id)): Path<(i64, String)>,
+    Path((project, number, file_id)): Path<(String, i64, String)>,
     Form(form): Form<FileCommentForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .file_update(FileUpdateRequest {
-            project: Some(project),
+            project: Some(project.clone()),
             task: Some(number.to_string()),
             file: Some(file_id),
             comment: Some(form.comment),
             role: Some(String::from(HUMAN_ACTOR)),
         })
         .await?;
-    Ok(Redirect::to(&format!("/tasks/{number}")))
+    Ok(task_redirect(&project, number))
 }
 
 async fn delete_file(
     State(state): State<AppState>,
-    Path((number, file_id)): Path<(i64, String)>,
+    Path((project, number, file_id)): Path<(String, i64, String)>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .file_delete(FileDeleteRequest {
-            project: Some(project),
+            project: Some(project.clone()),
             task: Some(number.to_string()),
             file: Some(file_id),
             role: Some(String::from(HUMAN_ACTOR)),
         })
         .await?;
-    Ok(Redirect::to(&format!("/tasks/{number}")))
+    Ok(task_redirect(&project, number))
 }
 
 async fn block_task(
     State(state): State<AppState>,
-    Path(number): Path<i64>,
+    Path((project, number)): Path<(String, i64)>,
     Form(form): Form<BlockForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .task_block(TaskBlockRequest {
@@ -412,15 +418,14 @@ async fn block_task(
             waiting_ref: normalize(form.waiting_ref),
         })
         .await?;
-    Ok(Redirect::to(&format!("/tasks/{number}")))
+    Ok(task_redirect(&project, number))
 }
 
 async fn resume_task(
     State(state): State<AppState>,
-    Path(number): Path<i64>,
+    Path((project, number)): Path<(String, i64)>,
     Form(form): Form<ReasonForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .task_resume(TaskResumeRequest {
@@ -430,15 +435,14 @@ async fn resume_task(
             reason: Some(form.reason),
         })
         .await?;
-    Ok(Redirect::to(&format!("/tasks/{number}")))
+    Ok(task_redirect(&project, number))
 }
 
 async fn reopen_task(
     State(state): State<AppState>,
-    Path(number): Path<i64>,
+    Path((project, number)): Path<(String, i64)>,
     Form(form): Form<ReasonForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .task_reopen(TaskReopenRequest {
@@ -448,15 +452,14 @@ async fn reopen_task(
             reason: Some(form.reason),
         })
         .await?;
-    Ok(Redirect::to(&format!("/tasks/{number}")))
+    Ok(task_redirect(&project, number))
 }
 
 async fn update_task(
     State(state): State<AppState>,
-    Path(number): Path<i64>,
+    Path((project, number)): Path<(String, i64)>,
     Form(form): Form<UpdateForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .task_update(TaskUpdateRequest {
@@ -467,14 +470,14 @@ async fn update_task(
             statement: normalize(form.statement),
         })
         .await?;
-    Ok(Redirect::to(&format!("/tasks/{number}")))
+    Ok(task_redirect(&project, number))
 }
 
 async fn search(
     State(state): State<AppState>,
+    Path(project): Path<String>,
     Query(query): Query<SearchQuery>,
 ) -> Result<Html<String>, WebError> {
-    let project = state.current_project().await;
     let q = query.q.unwrap_or_default().trim().to_string();
     let tasks = if q.is_empty() {
         Vec::new()
@@ -486,6 +489,7 @@ async fn search(
     };
 
     let template = SearchTemplate {
+        project_path: encode_segment(&project),
         project: project.clone(),
         current: "search",
         query: q,
@@ -495,11 +499,14 @@ async fn search(
     render(template)
 }
 
-async fn stats(State(state): State<AppState>) -> Result<Html<String>, WebError> {
-    let project = state.current_project().await;
+async fn stats(
+    State(state): State<AppState>,
+    Path(project): Path<String>,
+) -> Result<Html<String>, WebError> {
     let stats = state.service.task_stats(Some(project.clone())).await?;
 
     let template = StatsTemplate {
+        project_path: encode_segment(&project),
         project: project.clone(),
         current: "stats",
         by_status: stats
@@ -528,9 +535,9 @@ async fn stats(State(state): State<AppState>) -> Result<Html<String>, WebError> 
 
 async fn settings(
     State(state): State<AppState>,
+    Path(project): Path<String>,
     Query(query): Query<SettingsQuery>,
 ) -> Result<Html<String>, WebError> {
-    let project = state.current_project().await;
     let view = state.service.project_get(Some(project.clone())).await?;
     let saved = match query.saved.as_deref() {
         Some("paths") => Some("Пути сохранены."),
@@ -541,6 +548,7 @@ async fn settings(
     };
 
     let template = SettingsTemplate {
+        project_path: encode_segment(&project),
         project: project.clone(),
         current: "settings",
         saved,
@@ -577,14 +585,14 @@ async fn settings(
 }
 
 async fn projects_page(State(state): State<AppState>) -> Result<Html<String>, WebError> {
-    let current = state.current_project().await;
     let projects = state.service.list_projects().await?;
     let counts = state.service.project_status_counts().await?;
 
     let template = ProjectsTemplate {
-        project: current.clone(),
+        project_path: String::new(),
+        project: String::new(),
         current: "projects",
-        selected: current,
+        selected: String::new(),
         projects: projects
             .into_iter()
             .map(|project| {
@@ -598,6 +606,7 @@ async fn projects_page(State(state): State<AppState>) -> Result<Html<String>, We
                     })
                     .collect();
                 ProjectItemView {
+                    path: encode_segment(&project.name),
                     name: project.name,
                     root_path: project.root_path,
                     statuses,
@@ -624,8 +633,10 @@ async fn create_project(
             &form.config_json,
         )
         .await?;
-    *state.project.write().await = created.name.clone();
-    Ok(Redirect::to("/"))
+    Ok(Redirect::to(&format!(
+        "/p/{}",
+        encode_segment(&created.name)
+    )))
 }
 
 /// Роли из формы: `roles_json` (редактор таблицей), иначе старый список через запятую.
@@ -661,48 +672,50 @@ async fn select_project(
     Form(form): Form<ProjectSelectForm>,
 ) -> Result<Redirect, WebError> {
     let view = state.service.project_get(Some(form.name)).await?;
-    *state.project.write().await = view.project.name;
-    Ok(Redirect::to("/"))
+    Ok(Redirect::to(&format!(
+        "/p/{}",
+        encode_segment(&view.project.name)
+    )))
 }
 
 async fn add_role(
     State(state): State<AppState>,
+    Path(project): Path<String>,
     Form(form): Form<RoleForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .add_role(&project, &form.name, form.color.as_deref())
         .await?;
-    Ok(Redirect::to("/settings?saved=roles"))
+    Ok(settings_redirect(&project, "roles"))
 }
 
 async fn update_role(
     State(state): State<AppState>,
+    Path(project): Path<String>,
     Form(form): Form<UpdateRoleForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .update_role(&project, &form.old_name, &form.name, form.color.as_deref())
         .await?;
-    Ok(Redirect::to("/settings?saved=roles"))
+    Ok(settings_redirect(&project, "roles"))
 }
 
 async fn delete_role(
     State(state): State<AppState>,
+    Path(project): Path<String>,
     Form(form): Form<DeleteRoleForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state.service.delete_role(&project, &form.old_name).await?;
-    Ok(Redirect::to("/settings?saved=roles"))
+    Ok(settings_redirect(&project, "roles"))
 }
 
 async fn add_status(
     State(state): State<AppState>,
+    Path(project): Path<String>,
     Form(form): Form<StatusCreateForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .upsert_status(
@@ -714,26 +727,26 @@ async fn add_status(
             form.color.as_deref(),
         )
         .await?;
-    Ok(Redirect::to("/settings?saved=statuses"))
+    Ok(settings_redirect(&project, "statuses"))
 }
 
 async fn update_config(
     State(state): State<AppState>,
+    Path(project): Path<String>,
     Form(form): Form<ConfigForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .update_config(&project, &form.config_json)
         .await?;
-    Ok(Redirect::to("/settings?saved=config"))
+    Ok(settings_redirect(&project, "config"))
 }
 
 async fn update_paths(
     State(state): State<AppState>,
+    Path(project): Path<String>,
     Form(form): Form<PathsForm>,
 ) -> Result<Redirect, WebError> {
-    let project = state.current_project().await;
     state
         .service
         .update_paths(
@@ -743,15 +756,14 @@ async fn update_paths(
             &form.folder_pattern,
         )
         .await?;
-    Ok(Redirect::to("/settings?saved=paths"))
+    Ok(settings_redirect(&project, "paths"))
 }
 
 async fn file(
     State(state): State<AppState>,
     Path(file_id): Path<String>,
 ) -> Result<Response, WebError> {
-    let project = state.current_project().await;
-    let file = state.service.file_for_project(&project, &file_id).await?;
+    let file = state.service.file_any(&file_id).await?;
     let bytes = tokio::fs::read(&file.path)
         .await
         .map_err(|err| WebError::internal(format!("файл {}: {err}", file.path)))?;
@@ -801,6 +813,31 @@ fn normalize(value: Option<String>) -> Option<String> {
     value
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
+}
+
+/// Сегмент пути: проект может быть на кириллице или с пробелом.
+fn encode_segment(value: &str) -> String {
+    let mut out = String::new();
+    for byte in value.as_bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                out.push(char::from(*byte));
+            }
+            _ => out.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    out
+}
+
+fn task_redirect(project: &str, number: i64) -> Redirect {
+    Redirect::to(&format!("/p/{}/tasks/{number}", encode_segment(project)))
+}
+
+fn settings_redirect(project: &str, saved: &str) -> Redirect {
+    Redirect::to(&format!(
+        "/p/{}/settings?saved={saved}",
+        encode_segment(project)
+    ))
 }
 
 fn warning_text(code: String) -> String {
@@ -1085,6 +1122,7 @@ struct PathsForm {
 #[derive(Template)]
 #[template(path = "board.html")]
 struct BoardTemplate {
+    project_path: String,
     project: String,
     current: &'static str,
     tasks: Vec<BoardTaskView>,
@@ -1093,6 +1131,7 @@ struct BoardTemplate {
 #[derive(Template)]
 #[template(path = "task.html")]
 struct TaskTemplate {
+    project_path: String,
     project: String,
     current: &'static str,
     task: TaskView,
@@ -1109,6 +1148,7 @@ struct TaskTemplate {
 #[derive(Template)]
 #[template(path = "search.html")]
 struct SearchTemplate {
+    project_path: String,
     project: String,
     current: &'static str,
     query: String,
@@ -1118,6 +1158,7 @@ struct SearchTemplate {
 #[derive(Template)]
 #[template(path = "stats.html")]
 struct StatsTemplate {
+    project_path: String,
     project: String,
     current: &'static str,
     by_status: Vec<StatusCountView>,
@@ -1128,6 +1169,7 @@ struct StatsTemplate {
 #[derive(Template)]
 #[template(path = "settings.html")]
 struct SettingsTemplate {
+    project_path: String,
     project: String,
     current: &'static str,
     saved: Option<&'static str>,
@@ -1147,6 +1189,7 @@ struct SettingsRoleView {
 #[derive(Template)]
 #[template(path = "projects.html")]
 struct ProjectsTemplate {
+    project_path: String,
     project: String,
     current: &'static str,
     selected: String,
@@ -1154,6 +1197,7 @@ struct ProjectsTemplate {
 }
 
 struct ProjectItemView {
+    path: String,
     name: String,
     root_path: String,
     statuses: Vec<StatusChipView>,

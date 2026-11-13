@@ -8,7 +8,7 @@
   <div class="task-head-tools">
     <span class="status-chip" style="color: {{ task.status_color }}">{{ task.status }}</span>
     {% if task.status_kind != "done" %}
-      <form class="task-status" method="post" action="/tasks/{{ task.number }}/status">
+      <form class="task-status" method="post" action="/p/{{ project_path }}/tasks/{{ task.number }}/status">
         <select name="status" aria-label="Статус">
           {% for status in statuses %}
             <option value="{{ status.id }}" {% if status.id == task.status_id %}selected{% endif %}>{{ status.title }}</option>
@@ -85,7 +85,7 @@
         <tr class="create-row" id="create-comment" hidden>
           <td class="act-col"></td>
           <td colspan="3">
-            <form class="form" method="post" action="/tasks/{{ task.number }}/note">
+            <form class="form" method="post" action="/p/{{ project_path }}/tasks/{{ task.number }}/note">
               <label>Комментарий
                 <textarea name="text" rows="3" required></textarea>
               </label>
@@ -118,7 +118,7 @@
 <h2 class="sr-only">Файлы</h2>
 {% if folder_missing %}
   <p class="muted">Папка задачи ещё не создана.</p>
-  <form class="inline-form" method="post" action="/tasks/{{ task.number }}/folder">
+  <form class="inline-form" method="post" action="/p/{{ project_path }}/tasks/{{ task.number }}/folder">
     <button type="submit">Создать папку задачи</button>
   </form>
 {% endif %}
@@ -140,7 +140,7 @@
       <tr class="create-row" id="create-file" hidden>
         <td class="act-col"></td>
         <td colspan="4">
-          <form class="form" method="post" action="/tasks/{{ task.number }}/files" enctype="multipart/form-data">
+          <form class="form" method="post" action="/p/{{ project_path }}/tasks/{{ task.number }}/files" enctype="multipart/form-data">
             <input type="file" name="file" required aria-label="Файл">
             <input name="comment" placeholder="Комментарий: например, для обновления" aria-label="Комментарий">
             <div class="form-actions">
@@ -168,12 +168,12 @@
           <tr class="create-row" id="edit-file-{{ loop.index }}" hidden>
             <td class="act-col"></td>
             <td colspan="4">
-              <form class="form form-inline" method="post" action="/tasks/{{ task.number }}/files/{{ file.id }}/update">
+              <form class="form form-inline" method="post" action="/p/{{ project_path }}/tasks/{{ task.number }}/files/{{ file.id }}/update">
                 <input name="comment" value="{{ file.comment }}" placeholder="Комментарий" aria-label="Комментарий">
                 <div class="form-actions">
                   <button type="submit" class="form-ok" title="Сохранить комментарий" aria-label="Сохранить комментарий"><svg class="icon"><use href="#icon-check"></use></svg></button>
                   <button type="button" class="form-cancel" data-toggle="edit-file-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
-                  <button type="submit" class="form-delete" formaction="/tasks/{{ task.number }}/files/{{ file.id }}/delete" formnovalidate data-confirm="Удалить файл «{{ file.name }}»?" title="Удалить файл" aria-label="Удалить файл {{ file.name }}"><svg class="icon"><use href="#icon-trash"></use></svg></button>
+                  <button type="submit" class="form-delete" formaction="/p/{{ project_path }}/tasks/{{ task.number }}/files/{{ file.id }}/delete" formnovalidate data-confirm="Удалить файл «{{ file.name }}»?" title="Удалить файл" aria-label="Удалить файл {{ file.name }}"><svg class="icon"><use href="#icon-trash"></use></svg></button>
                 </div>
               </form>
             </td>
@@ -219,7 +219,7 @@
 
   <details>
     <summary>Изменить название или постановку</summary>
-    <form class="form" method="post" action="/tasks/{{ task.number }}/update">
+    <form class="form" method="post" action="/p/{{ project_path }}/tasks/{{ task.number }}/update">
       <label>Название
         <input name="title" value="{{ task.title }}">
       </label>
@@ -233,7 +233,7 @@
   {% if task.status_kind == "new" || task.status_kind == "active" %}
     <details>
       <summary>Остановить или поставить в ожидание</summary>
-      <form class="form" method="post" action="/tasks/{{ task.number }}/block">
+      <form class="form" method="post" action="/p/{{ project_path }}/tasks/{{ task.number }}/block">
         <label>Причина
           <textarea name="reason" rows="2" required></textarea>
         </label>
@@ -251,7 +251,7 @@
   {% if task.status_kind == "blocked" || task.status_kind == "waiting" %}
     <details>
       <summary>Возобновить</summary>
-      <form class="form" method="post" action="/tasks/{{ task.number }}/resume">
+      <form class="form" method="post" action="/p/{{ project_path }}/tasks/{{ task.number }}/resume">
         <label>Причина
           <input name="reason" required>
         </label>
@@ -263,7 +263,7 @@
   {% if task.status_kind == "done" %}
     <details>
       <summary>Переоткрыть</summary>
-      <form class="form" method="post" action="/tasks/{{ task.number }}/reopen">
+      <form class="form" method="post" action="/p/{{ project_path }}/tasks/{{ task.number }}/reopen">
         <label>Причина
           <input name="reason" required>
         </label>

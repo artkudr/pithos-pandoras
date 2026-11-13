@@ -13,7 +13,7 @@
 
 <section class="card">
   <h2>Пути проекта</h2>
-  <form class="form" method="post" action="/settings/paths">
+  <form class="form" method="post" action="/p/{{ project_path }}/settings/paths">
     <label>Корень проекта
       <input name="root_path" value="{{ root_path }}" required>
     </label>
@@ -45,7 +45,7 @@
       <tr class="create-row" id="create-role" hidden>
         <td class="act-col"></td>
         <td>
-          <form class="form form-inline" method="post" action="/settings/roles">
+          <form class="form form-inline" method="post" action="/p/{{ project_path }}/settings/roles">
             <input name="name" placeholder="Новая роль" aria-label="Новая роль" required>
             <div class="color-field">
               <button type="button" class="color-button" aria-expanded="false" aria-label="Цвет роли"><span class="color-dot"></span></button>
@@ -83,7 +83,7 @@
           <tr class="create-row" id="edit-role-{{ loop.index }}" hidden>
             <td class="act-col"></td>
             <td>
-              <form class="form form-inline" method="post" action="/settings/roles/update">
+              <form class="form form-inline" method="post" action="/p/{{ project_path }}/settings/roles/update">
                 <input type="hidden" name="old_name" value="{{ role.name }}">
                 <input name="name" value="{{ role.name }}" aria-label="Название роли" required>
                 <div class="color-field">
@@ -101,7 +101,7 @@
                 <div class="form-actions">
                   <button type="submit" class="form-ok" title="Сохранить роль" aria-label="Сохранить роль"><svg class="icon"><use href="#icon-check"></use></svg></button>
                   <button type="button" class="form-cancel" data-toggle="edit-role-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
-                  <button type="submit" class="form-delete" formaction="/settings/roles/delete" formnovalidate data-confirm="Удалить роль «{{ role.name }}»?" title="Удалить роль" aria-label="Удалить роль {{ role.name }}"><svg class="icon"><use href="#icon-trash"></use></svg></button>
+                  <button type="submit" class="form-delete" formaction="/p/{{ project_path }}/settings/roles/delete" formnovalidate data-confirm="Удалить роль «{{ role.name }}»?" title="Удалить роль" aria-label="Удалить роль {{ role.name }}"><svg class="icon"><use href="#icon-trash"></use></svg></button>
                 </div>
               </form>
             </td>
@@ -130,7 +130,7 @@
       <tr class="create-row" id="create-status" hidden>
         <td class="act-col"></td>
         <td colspan="3">
-          <form class="form" method="post" action="/settings/statuses">
+          <form class="form" method="post" action="/p/{{ project_path }}/settings/statuses">
             <div class="form-row">
               <label>ID
                 <input name="id" required>
@@ -186,7 +186,7 @@
         <tr class="create-row" id="edit-status-{{ loop.index }}" hidden>
           <td class="act-col"></td>
           <td colspan="3">
-            <form class="form" method="post" action="/settings/statuses">
+            <form class="form" method="post" action="/p/{{ project_path }}/settings/statuses">
               <input type="hidden" name="id" value="{{ status.id }}">
               <div class="form-row">
                 <label>Статус
@@ -233,7 +233,7 @@
 
 <section class="card">
   <h2>Настройки в JSON</h2>
-  <form class="form" method="post" action="/settings/config">
+  <form class="form" method="post" action="/p/{{ project_path }}/settings/config">
     <label>Правила входов и настройки
       <textarea class="code-input" name="config_json" rows="12">{{ config_json }}</textarea>
     </label>

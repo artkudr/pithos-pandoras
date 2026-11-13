@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Проекты — {{ project }}{% endblock %}
+{% block title %}Проекты{% endblock %}
 
 {% block content %}
 <h1 class="sr-only">Проекты</h1>
@@ -97,16 +97,8 @@
           <td class="act-col"></td>
           <td>
             <div class="cell-status">
-              {% if item.name == selected %}
-                <span class="dot dot-current" aria-hidden="true"></span>
-                {{ item.name }}
-                <span class="sr-only">— текущий проект</span>
-              {% else %}
-                <form class="inline-form" method="post" action="/projects/select">
-                  <input type="hidden" name="name" value="{{ item.name }}">
-                  <button type="submit" class="link-button" aria-label="Выбрать проект {{ item.name }}">{{ item.name }}</button>
-                </form>
-              {% endif %}
+              {% if item.name == selected %}<span class="dot dot-current" aria-hidden="true"></span>{% endif %}
+              <a class="link-button" href="/p/{{ item.path }}" aria-label="Открыть проект {{ item.name }}">{{ item.name }}</a>
             </div>
           </td>
           <td>

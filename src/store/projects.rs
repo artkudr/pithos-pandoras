@@ -1,3 +1,5 @@
+use std::path::{Component, Path};
+
 use rusqlite::{params, Connection, OptionalExtension};
 use uuid::Uuid;
 
@@ -234,6 +236,12 @@ pub fn update_paths(
     tasks_dir: &str,
     folder_pattern: &str,
 ) -> Result<(), StoreError> {
+    let folder_pattern = folder_pattern.trim();
+    let root_path = normalize_root_path(root_path)?;
+    let tasks_dir = normalize_tasks_dir(tasks_dir)?;
+    validate_folder_pattern(folder_pattern)?;
+    ensure_paths_free(conn, Some(project_id), &root_path, &tasks_dir)?;
+
     conn.execute(
         "UPDATE projects
          SET root_path = ?2, tasks_dir = ?3, folder_pattern = ?4
@@ -241,6 +249,135 @@ pub fn update_paths(
         params![project_id, root_path, tasks_dir, folder_pattern],
     )?;
     Ok(())
+}
+
+/// Имя проекта попадает в адрес страницы, поэтому `/`, `\`, `?` и `#` нельзя.
+fn validate_project_name(name: &str) -> Result<(), StoreError> {
+    if name.is_empty() {
+        return Err(StoreError::Conflict(String::from(
+            "Имя проекта не может быть пустым",
+        )));
+    }
+    if name == "." || name == ".." {
+        return Err(StoreError::Conflict(String::from(
+            "Имя проекта не может быть `.` или `..`",
+        )));
+    }
+    if name
+        .chars()
+        .any(|ch| ch == '/' || ch == '\\' || ch == '?' || ch == '#' || ch.is_control())
+    {
+        return Err(StoreError::Conflict(String::from(
+            "В имени проекта нельзя использовать `/`, `\\`, `?`, `#` и управляющие символы",
+        )));
+    }
+    Ok(())
+}
+
+/// Корень проекта храним абсолютным: иначе он зависит от рабочего каталога.
+fn normalize_root_path(value: &str) -> Result<String, StoreError> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Err(StoreError::Conflict(String::from(
+            "Корень проекта не может быть пустым",
+        )));
+    }
+    let path = Path::new(value);
+    let absolute = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
+    let canonical = std::fs::canonicalize(&absolute).unwrap_or(absolute);
+    Ok(canonical
+        .to_string_lossy()
+        .trim_start_matches("\\\\?\\")
+        .to_string())
+}
+
+/// Папка задач — только внутри корня проекта.
+fn normalize_tasks_dir(value: &str) -> Result<String, StoreError> {
+    let trimmed = value.trim().trim_end_matches(['/', '\\']);
+    let path = Path::new(trimmed);
+    if trimmed.is_empty()
+        || path.is_absolute()
+        || path.components().any(|component| {
+            matches!(
+                component,
+                Component::ParentDir
+                    | Component::CurDir
+                    | Component::RootDir
+                    | Component::Prefix(_)
+            )
+        })
+    {
+        return Err(StoreError::Conflict(String::from(
+            "Папка задач должна быть относительной и не выходить за корень проекта",
+        )));
+    }
+    Ok(trimmed.replace('\\', "/"))
+}
+
+fn validate_folder_pattern(pattern: &str) -> Result<(), StoreError> {
+    if pattern.trim().is_empty() || !pattern.contains("{number}") {
+        return Err(StoreError::Conflict(String::from(
+            "Шаблон папки должен содержать `{number}`, иначе задачи столкнутся",
+        )));
+    }
+    let path = Path::new(pattern);
+    if path.is_absolute()
+        || path.components().any(|component| {
+            matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
+        })
+    {
+        return Err(StoreError::Conflict(String::from(
+            "Шаблон папки не должен выходить за папку задач",
+        )));
+    }
+    Ok(())
+}
+
+/// Один и тот же каталог задач — только у одного проекта.
+///
+/// Сравниваем не `root_path` и `tasks_dir` по отдельности, а итоговый путь:
+/// `корень/Задачи/Проект` и `корень/Проект/Задачи` могут совпасть.
+fn ensure_paths_free(
+    conn: &Connection,
+    except_project_id: Option<&str>,
+    root_path: &str,
+    tasks_dir: &str,
+) -> Result<(), StoreError> {
+    let target = path_key(&Path::new(root_path).join(tasks_dir));
+    let mut stmt = conn.prepare(
+        "SELECT name, root_path, tasks_dir FROM projects
+         WHERE archived = 0 AND id != ?1",
+    )?;
+    let rows = stmt.query_map([except_project_id.unwrap_or("")], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+        ))
+    })?;
+    for row in rows {
+        let (name, root, tasks) = row?;
+        let root = normalize_root_path(&root).unwrap_or(root);
+        let existing = path_key(&Path::new(&root).join(tasks.replace('\\', "/")));
+        if existing == target {
+            return Err(StoreError::Conflict(format!(
+                "Папка задач уже занята проектом `{name}`"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn path_key(path: &Path) -> String {
+    let value = path.to_string_lossy().replace('\\', "/");
+    if cfg!(windows) {
+        value.to_lowercase()
+    } else {
+        value
+    }
 }
 
 pub fn init_project(
@@ -253,6 +390,13 @@ pub fn init_project(
     config_json: &str,
 ) -> Result<Project, StoreError> {
     let now = now_rfc3339();
+    let name = name.trim();
+    validate_project_name(name)?;
+    let folder_pattern = folder_pattern.trim();
+    validate_folder_pattern(folder_pattern)?;
+    let root_path = normalize_root_path(root_path)?;
+    let tasks_dir = normalize_tasks_dir(tasks_dir)?;
+
     let tx = conn.transaction()?;
 
     let existing: Option<String> = tx
@@ -260,6 +404,7 @@ pub fn init_project(
             row.get(0)
         })
         .optional()?;
+    ensure_paths_free(&tx, existing.as_deref(), &root_path, &tasks_dir)?;
 
     let project_id = match existing {
         Some(id) => id,

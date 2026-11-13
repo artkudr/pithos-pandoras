@@ -99,10 +99,10 @@ impl AppError {
             .with_hint("Укажите номер или идентификатор задачи. Значения по умолчанию нет.")
     }
 
-    pub fn task_unknown(task: &str) -> Self {
+    pub fn task_unknown(project: &str, task: &str) -> Self {
         Self::new(
             ErrorCode::TaskUnknown,
-            format!("Задача `{task}` не найдена в проекте"),
+            format!("Задача `{task}` не найдена в проекте `{project}`"),
         )
     }
 

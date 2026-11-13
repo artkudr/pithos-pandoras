@@ -581,7 +581,9 @@ impl Service {
 
         match card {
             Ok(card) => Ok(card),
-            Err(StoreError::NotFound) => Err(AppError::task_unknown(&task_ref_for_error)),
+            Err(StoreError::NotFound) => {
+                Err(AppError::task_unknown(&project_name, &task_ref_for_error))
+            }
             Err(err) => Err(err.into()),
         }
     }
@@ -589,7 +591,7 @@ impl Service {
     pub async fn ensure_task_folder(&self, project: &str, task: &str) -> Result<String, AppError> {
         let view = self.project_view(project).await?;
         let project = view.project.clone();
-        let task = self.task(&project.id, task).await?;
+        let task = self.task(&project, task).await?;
         let folder_path = Path::new(&project.root_path)
             .join(&project.tasks_dir)
             .join(&task.folder_name);
@@ -653,7 +655,9 @@ impl Service {
 
         match page {
             Ok(page) => Ok(page),
-            Err(StoreError::NotFound) => Err(AppError::task_unknown(&task_ref_for_error)),
+            Err(StoreError::NotFound) => {
+                Err(AppError::task_unknown(&project_name, &task_ref_for_error))
+            }
             Err(err) => Err(err.into()),
         }
     }
@@ -666,7 +670,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
         let role_owned = role.clone();
 
@@ -746,7 +750,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
         let role_owned = role.clone();
 
@@ -859,7 +863,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
         let now = db::now_rfc3339();
         let role_for_write = role.clone();
@@ -915,7 +919,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
 
         let open = self
@@ -990,7 +994,7 @@ impl Service {
 
         let view = self.project_view(&project_name).await?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
 
         let report = self
@@ -1014,7 +1018,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
         let project_id = project.id.clone();
 
@@ -1065,7 +1069,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
         let project_id = project.id.clone();
 
@@ -1136,7 +1140,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
         let project_id = project.id.clone();
 
@@ -1174,7 +1178,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
         let project_id = project.id.clone();
 
@@ -1211,7 +1215,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
         let now = db::now_rfc3339();
 
@@ -1248,7 +1252,7 @@ impl Service {
         let task_ref = require_task(task.as_deref())?.to_string();
         let view = self.project_view(&project_name).await?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
         let events = self
             .store
@@ -1281,7 +1285,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
 
         let origin = event_origin(&role);
@@ -1319,7 +1323,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
         let project_id = project.id.clone();
 
@@ -1376,7 +1380,7 @@ impl Service {
         let task_ref = require_task(task.as_deref())?.to_string();
         let view = self.project_view(&project_name).await?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
 
         let open = self
@@ -1573,7 +1577,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
 
         let root = std::fs::canonicalize(&project.root_path)
@@ -1644,7 +1648,7 @@ impl Service {
 
         let view = self.project_view(&project_name).await?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
 
         let file = self
@@ -1669,7 +1673,7 @@ impl Service {
 
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
-        let task = self.task(&view.project.id, &task_ref).await?;
+        let task = self.task(&view.project, &task_ref).await?;
         let task_id = task.id.clone();
 
         let found = self
@@ -1718,7 +1722,7 @@ impl Service {
         let view = self.project_view(&project_name).await?;
         ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
-        let task = self.task(&project.id, &task_ref).await?;
+        let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
 
         let found = self
@@ -1766,6 +1770,22 @@ impl Service {
             }
         }
         Ok(())
+    }
+
+    /// Файл по идентификатору без проекта: ссылки `/files/<id>` должны
+    /// открываться из отчётов, где проекта в адресе нет.
+    pub async fn file_any(&self, file_id: &str) -> Result<FileRecord, AppError> {
+        let file_id = file_id.to_string();
+        let file = self
+            .store
+            .read(move |conn| files::get_file(conn, &file_id))
+            .await;
+
+        match file {
+            Ok(file) => Ok(file),
+            Err(StoreError::NotFound) => Err(AppError::not_found("Файл не найден")),
+            Err(err) => Err(err.into()),
+        }
     }
 
     pub async fn file_for_project(
@@ -1817,8 +1837,12 @@ impl Service {
         }
     }
 
-    async fn task(&self, project_id: &str, task_ref: &str) -> Result<Task, AppError> {
-        let project_id = project_id.to_string();
+    async fn task(
+        &self,
+        project: &crate::domain::Project,
+        task_ref: &str,
+    ) -> Result<Task, AppError> {
+        let project_id = project.id.clone();
         let task_ref_owned = task_ref.to_string();
         let result = self
             .store
@@ -1827,7 +1851,7 @@ impl Service {
 
         match result {
             Ok(task) => Ok(task),
-            Err(StoreError::NotFound) => Err(AppError::task_unknown(task_ref)),
+            Err(StoreError::NotFound) => Err(AppError::task_unknown(&project.name, task_ref)),
             Err(err) => Err(err.into()),
         }
     }

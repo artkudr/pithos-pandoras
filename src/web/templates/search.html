@@ -5,7 +5,7 @@
 {% block content %}
 <h1 class="sr-only">Поиск</h1>
 
-<form class="form search-form" method="get" action="/search">
+<form class="form search-form" method="get" action="/p/{{ project_path }}/search">
   <label>Запрос
     <input name="q" value="{{ query }}" placeholder="слово или фраза">
   </label>
@@ -35,7 +35,7 @@
           {% for task in tasks %}
             <tr>
               <td class="num">{{ task.number }}</td>
-              <td><a class="task-link" href="/tasks/{{ task.number }}">{{ task.title }}</a></td>
+              <td><a class="task-link" href="/p/{{ project_path }}/tasks/{{ task.number }}">{{ task.title }}</a></td>
               <td><span class="status-chip" style="color: {{ task.status_color }}">{{ task.status }}</span></td>
               <td>{{ task.current_role }}</td>
               <td>{{ task.waiting_for }}</td>

@@ -22,12 +22,18 @@
       <a class="brand" href="/projects" title="Проекты" aria-label="Проекты" {% if current == "projects" %}aria-current="page"{% endif %}>
         <img class="brand-mark" src="/static/icon.svg" alt="" width="24" height="24">
       </a>
-      <a class="project" href="/settings" title="Настройки проекта" {% if current == "settings" %}aria-current="page"{% endif %}>{{ project }}<span class="sr-only"> — настройки проекта</span></a>
+      {% if !project_path.is_empty() %}
+        <a class="project" href="/p/{{ project_path }}/settings" title="Настройки проекта" {% if current == "settings" %}aria-current="page"{% endif %}>{{ project }}<span class="sr-only"> — настройки проекта</span></a>
+      {% endif %}
     </div>
     <nav class="nav" aria-label="Разделы">
-      <a href="/" {% if current == "board" %}aria-current="page"{% endif %}>Доска</a>
-      <a href="/search" {% if current == "search" %}aria-current="page"{% endif %}>Поиск</a>
-      <a href="/stats" {% if current == "stats" %}aria-current="page"{% endif %}>Статистика</a>
+      {% if !project_path.is_empty() %}
+        <a href="/p/{{ project_path }}" {% if current == "board" %}aria-current="page"{% endif %}>Доска</a>
+        <a href="/p/{{ project_path }}/search" {% if current == "search" %}aria-current="page"{% endif %}>Поиск</a>
+        <a href="/p/{{ project_path }}/stats" {% if current == "stats" %}aria-current="page"{% endif %}>Статистика</a>
+      {% else %}
+        <a href="/projects" {% if current == "projects" %}aria-current="page"{% endif %}>Проекты</a>
+      {% endif %}
     </nav>
     <div class="top-end">
       <span class="icon-static" aria-hidden="true">
