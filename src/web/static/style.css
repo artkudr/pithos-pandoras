@@ -521,11 +521,10 @@ h3 {
 
 .task-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
-  flex-wrap: wrap;
 }
 
 .task-head-tools {
@@ -533,6 +532,7 @@ h3 {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  flex: 0 0 auto;
 }
 
 .task-status {
@@ -553,6 +553,8 @@ h3 {
 
 .task-head h1 {
   margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .kind {
@@ -722,26 +724,10 @@ h3 {
   font-size: 0.92em;
 }
 
-.comment {
-  padding: 12px 0;
-  border-top: 1px solid var(--line);
-}
-
-.comment:first-of-type {
-  border-top: 0;
-  padding-top: 0;
-}
-
-.comment header {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 4px;
-}
-
-.comment p {
-  margin: 0;
+.comment-text {
   white-space: pre-wrap;
 }
+
 
 .nav {
   display: flex;
@@ -911,6 +897,10 @@ pre {
 
   .create-columns {
     grid-template-columns: 1fr;
+  }
+
+  .task-head {
+    flex-wrap: wrap;
   }
 
   .top {

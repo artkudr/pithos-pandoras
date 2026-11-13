@@ -68,28 +68,51 @@
 
 <section class="card">
   <h2>Комментарии</h2>
-  {% if comments.is_empty() %}
-    <p class="muted">Комментариев пока нет.</p>
-  {% else %}
-    {% for comment in comments %}
-      <article class="comment">
-        <header>
-          <strong>{{ comment.author }}</strong>
-          <span class="muted">{{ comment.created_at }}</span>
-        </header>
-        <p>{{ comment.body }}</p>
-      </article>
-    {% endfor %}
-  {% endif %}
-  <details>
-    <summary>Написать комментарий</summary>
-    <form class="form" method="post" action="/tasks/{{ task.number }}/note">
-      <label>Текст
-        <textarea name="text" rows="3" required></textarea>
-      </label>
-      <button type="submit">Добавить комментарий</button>
-    </form>
-  </details>
+  <div class="table-wrap">
+    <table class="board">
+      <thead>
+        <tr>
+          <th class="act-col">
+            <button type="button" class="add-button" data-toggle="create-comment" aria-expanded="false" aria-controls="create-comment" title="Написать комментарий" aria-label="Написать комментарий"><svg class="icon"><use href="#icon-plus"></use></svg></button>
+            <span class="sr-only">Действие</span>
+          </th>
+          <th>Комментарий</th>
+          <th>Кто</th>
+          <th>Когда</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="create-row" id="create-comment" hidden>
+          <td class="act-col"></td>
+          <td colspan="3">
+            <form class="form" method="post" action="/tasks/{{ task.number }}/note">
+              <label>Комментарий
+                <textarea name="text" rows="3" required></textarea>
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="form-ok" title="Добавить комментарий" aria-label="Добавить комментарий"><svg class="icon"><use href="#icon-check"></use></svg></button>
+                <button type="button" class="form-cancel" data-toggle="create-comment" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        {% if comments.is_empty() %}
+          <tr>
+            <td colspan="4" class="muted">Комментариев пока нет. Нажмите «+», чтобы написать.</td>
+          </tr>
+        {% else %}
+          {% for comment in comments %}
+            <tr>
+              <td class="act-col"></td>
+              <td class="comment-text">{{ comment.body }}</td>
+              <td class="muted nowrap">{{ comment.author }}</td>
+              <td class="muted nowrap">{{ comment.created_at }}</td>
+            </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <section class="card">
