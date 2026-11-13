@@ -28,7 +28,9 @@ cargo run -- backup --db pithos-pandoras.db
 tools/check.ps1          # форматирование, clippy, тесты, cargo deny
 ```
 
-Сервер для агентов: `http://127.0.0.1:8787/mcp`. Страница: `http://127.0.0.1:8787/`.
+Сервер для агентов: `http://127.0.0.1:8787/mcp`. Страница:
+`http://127.0.0.1:8787/` — редирект в проект по умолчанию; список проектов —
+`/projects`, доска проекта — `/p/{project}`.
 При первом запуске `serve` создаёт `pithos-pandoras.key` и печатает ключ.
 Клиент MCP передаёт `Authorization: Bearer <ключ>`.
 
@@ -61,11 +63,17 @@ tools/install-tray.ps1
 
 ## Индекс
 
+Граф через MCP `graphify` (`.opencode/opencode.json`):
+
 ```text
-tools/index.ps1 build
-tools/index.ps1 query "как устроен writer"
-tools/index.ps1 affected "create_task" -Depth 3
+query_graph "как устроен writer"
+get_node "AppError"
+get_neighbors "create_task"
+graph_stats
 ```
+
+В терминале без OpenCode — `graphify query "…"`, `graphify explain "…"`,
+`graphify affected "…"`.
 
 `home-dev-kit/` — справочный архив с рабочего компьютера. Не часть проекта,
 в индекс не попадает.

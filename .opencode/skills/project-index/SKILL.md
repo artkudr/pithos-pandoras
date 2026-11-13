@@ -1,7 +1,7 @@
 ---
 name: project-index
 description: >-
-  Индекс проекта PithosPandoras: graphify для структуры, вызовов и влияния,
+  Индекс проекта PithosPandoras: MCP graphify для структуры, вызовов и влияния,
   rg для точных строк. Загружай перед поиском по коду и после крупных правок.
 ---
 
@@ -14,29 +14,28 @@ description: >-
 
 | Вопрос | Инструмент |
 |---|---|
-| Из чего состоит модуль | `tools/index.ps1 query "..."` |
-| Кто вызывает функцию | `tools/index.ps1 affected "symbol"` |
-| Что сломается от правки | `tools/index.ps1 affected "symbol" -Depth 3` |
-| Как связаны две сущности | `tools/index.ps1 path "A" "B"` |
-| Что это за узел | `tools/index.ps1 explain "symbol"` |
+| Из чего состоит модуль | `query_graph "..."` |
+| Кто вызывает функцию | `get_neighbors "symbol"` |
+| Что сломается от правки | `get_neighbors "symbol"` |
+| Как связаны две сущности | `shortest_path "A" "B"` |
+| Что это за узел | `get_node "symbol"` |
+| Главные узлы | `god_nodes` |
+| Размер и свежесть графа | `graph_stats` |
 | Точный текст ошибки, ключ конфига | `rg -n "..." src` |
 | Зависимости крейтов | `cargo tree` / `cargo metadata` |
 
-## Команды
+## Граф
 
-```text
-tools/index.ps1 build                 # первый граф
-tools/index.ps1 update                # после структурных правок
-tools/index.ps1 query "как устроен writer"
-tools/index.ps1 explain "AppError"
-tools/index.ps1 path "stage_start" "reports"
-tools/index.ps1 affected "create_task" -Depth 3
-tools/index.ps1 status                # есть ли граф
-```
+MCP-сервер `graphify` подключён проектом — `.opencode/opencode.json`, граф —
+`graphify-out/graph.json`. Инструменты: `query_graph`, `get_node`,
+`get_neighbors`, `get_community`, `god_nodes`, `graph_stats`, `shortest_path`.
+
+В терминале без OpenCode — тот же граф через CLI: `graphify query`,
+`graphify explain`, `graphify affected`, `graphify path`.
 
 ## Запасной путь
 
-Если `graphify` не установлен или граф устарел:
+Если MCP недоступен или граф устарел:
 
 ```text
 rg -n "pattern" src
@@ -49,9 +48,11 @@ cargo tree
 
 ## Обновление
 
-- После добавления модуля, переименования функции или крупной правки —
-  `tools/index.ps1 update`.
-- `build` — с нуля; `update` — только изменённые файлы.
+- После переименования функции или крупной правки — `graphify update .`.
+- Полная сборка — `graphify extract . --code-only --cargo`, затем
+  `graphify cluster-only . --no-label`.
+- После коммита граф обновляет git-хук; `graph_stats` показывает, на каком
+  коммите он собран.
 - `graphify-out/` в git не коммитится: это локальный кэш.
 
 ## Границы

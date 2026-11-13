@@ -43,16 +43,18 @@ tools/check.ps1        # всё сразу
 
 ## Индекс
 
-Перед вопросом о структуре, вызовах и влиянии правки — граф:
+Перед вопросом о структуре, вызовах и влиянии правки — граф через MCP
+`graphify` (проектный конфиг `.opencode/opencode.json`):
 
 ```text
-tools/index.ps1 query "..."
-tools/index.ps1 explain "Symbol"
-tools/index.ps1 affected "Symbol" -Depth 3
+query_graph "как устроен writer"
+get_node "AppError"
+get_neighbors "create_task"
+god_nodes
 ```
 
-Точные строки, тексты ошибок и ключи конфигов — `rg`. После крупных правок —
-`tools/index.ps1 update`. После коммита граф обновляет git-хук graphify.
+Точные строки, тексты ошибок и ключи конфигов — `rg`. Граф после коммита
+обновляет git-хук; вручную — `graphify update .`.
 
 ## Сервис задач
 
@@ -65,8 +67,10 @@ tools/index.ps1 affected "Symbol" -Depth 3
 
 ## Страница
 
-`/` — доска, `/tasks/{number}` — карточка, `/search`, `/stats`, `/projects`,
-`/settings`. Действия человека идут с подписью `человек` и роль не требуют.
+`/` — редирект в проект по умолчанию, `/projects` — список проектов,
+`/p/{project}` — доска, `/p/{project}/tasks/{number}` — карточка,
+`/p/{project}/search`, `/p/{project}/stats`, `/p/{project}/settings`.
+Действия человека идут с подписью `человек` и роль не требуют.
 
 Задача, созданная человеком, сразу получает папку. Для задачи агента папку
 создаёт агент; на карточке есть кнопка «Создать папку» и загрузка файла.
