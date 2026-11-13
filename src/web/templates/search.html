@@ -35,7 +35,7 @@
           {% for task in tasks %}
             <tr>
               <td class="num">{{ task.number }}</td>
-              <td><a href="/tasks/{{ task.number }}">{{ task.title }}</a></td>
+              <td><a class="task-link" href="/tasks/{{ task.number }}">{{ task.title }}</a></td>
               <td><span class="status-chip" style="color: {{ task.status_color }}">{{ task.status }}</span></td>
               <td>{{ task.current_role }}</td>
               <td>{{ task.waiting_for }}</td>
