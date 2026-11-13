@@ -844,7 +844,7 @@ fn format_local_time(value: &str) -> String {
     match chrono::DateTime::parse_from_rfc3339(value) {
         Ok(parsed) => parsed
             .with_timezone(&chrono::Local)
-            .format("%Y-%m-%d %H:%M:%S %:z")
+            .format("%Y-%m-%d %H:%M:%S")
             .to_string(),
         Err(_) => value.to_string(),
     }
