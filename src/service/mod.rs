@@ -174,6 +174,23 @@ pub struct FileAddRequest {
 }
 
 #[derive(Debug, Clone)]
+pub struct FileUpdateRequest {
+    pub project: Option<String>,
+    pub task: Option<String>,
+    pub file: Option<String>,
+    pub comment: Option<String>,
+    pub role: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FileDeleteRequest {
+    pub project: Option<String>,
+    pub task: Option<String>,
+    pub file: Option<String>,
+    pub role: Option<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct FileGetRequest {
     pub project: Option<String>,
     pub task: Option<String>,
@@ -1641,6 +1658,114 @@ impl Service {
             Err(StoreError::NotFound) => Err(AppError::not_found("Файл не найден")),
             Err(err) => Err(err.into()),
         }
+    }
+
+    pub async fn file_update(&self, req: FileUpdateRequest) -> Result<FileRecord, AppError> {
+        let project_name = require_project(req.project.as_deref())?.to_string();
+        let task_ref = require_task(req.task.as_deref())?.to_string();
+        let file_id = require_field(req.file.as_deref(), "file")?.to_string();
+        let role = require_role(req.role.as_deref())?.to_string();
+        let comment = req.comment.unwrap_or_default().trim().to_string();
+
+        let view = self.project_view(&project_name).await?;
+        ensure_role(&view.roles, &role)?;
+        let task = self.task(&view.project.id, &task_ref).await?;
+        let task_id = task.id.clone();
+
+        let found = self
+            .store
+            .read({
+                let file_id = file_id.clone();
+                move |conn| files::get_file(conn, &file_id)
+            })
+            .await;
+        match found {
+            Ok(file) if file.task_id == task_id => {}
+            Ok(_) => return Err(AppError::not_found("Файл не принадлежит задаче")),
+            Err(StoreError::NotFound) => return Err(AppError::not_found("Файл не найден")),
+            Err(err) => return Err(err.into()),
+        }
+
+        let origin = event_origin(&role);
+        let file = self
+            .store
+            .write(move |conn| {
+                let tx = conn.transaction()?;
+                let file = files::update_comment(&tx, &file_id, &comment)?;
+                let payload = serde_json::json!({"comment": &comment}).to_string();
+                events::insert_event(
+                    &tx,
+                    &task_id,
+                    "file_updated",
+                    None,
+                    Some(&role),
+                    &payload,
+                    origin,
+                )?;
+                tx.commit()?;
+                Ok(file)
+            })
+            .await?;
+        Ok(file)
+    }
+
+    pub async fn file_delete(&self, req: FileDeleteRequest) -> Result<(), AppError> {
+        let project_name = require_project(req.project.as_deref())?.to_string();
+        let task_ref = require_task(req.task.as_deref())?.to_string();
+        let file_id = require_field(req.file.as_deref(), "file")?.to_string();
+        let role = require_role(req.role.as_deref())?.to_string();
+
+        let view = self.project_view(&project_name).await?;
+        ensure_role(&view.roles, &role)?;
+        let project = view.project.clone();
+        let task = self.task(&project.id, &task_ref).await?;
+        let task_id = task.id.clone();
+
+        let found = self
+            .store
+            .read({
+                let file_id = file_id.clone();
+                move |conn| files::get_file(conn, &file_id)
+            })
+            .await;
+        match found {
+            Ok(file) if file.task_id == task_id => {}
+            Ok(_) => return Err(AppError::not_found("Файл не принадлежит задаче")),
+            Err(StoreError::NotFound) => return Err(AppError::not_found("Файл не найден")),
+            Err(err) => return Err(err.into()),
+        }
+
+        let origin = event_origin(&role);
+        let removed = self
+            .store
+            .write(move |conn| {
+                let tx = conn.transaction()?;
+                let file = files::delete_file(&tx, &file_id)?;
+                let payload = serde_json::json!({"path": &file.path}).to_string();
+                events::insert_event(
+                    &tx,
+                    &task_id,
+                    "file_removed",
+                    None,
+                    Some(&role),
+                    &payload,
+                    origin,
+                )?;
+                tx.commit()?;
+                Ok(file)
+            })
+            .await?;
+
+        let root = std::fs::canonicalize(&project.root_path).ok();
+        let path = std::fs::canonicalize(&removed.path).ok();
+        if let (Some(root), Some(path)) = (root, path) {
+            if path.starts_with(&root) {
+                if let Err(err) = std::fs::remove_file(&path) {
+                    tracing::warn!(%err, path = %path.display(), "не удалось удалить файл");
+                }
+            }
+        }
+        Ok(())
     }
 
     pub async fn file_for_project(

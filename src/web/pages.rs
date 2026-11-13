@@ -12,8 +12,9 @@ use serde::Deserialize;
 
 use crate::domain::{AppError, ErrorCode, TaskListItem};
 use crate::service::{
-    FileAddRequest, Service, TaskBlockRequest, TaskNoteRequest, TaskReopenRequest,
-    TaskResumeRequest, TaskSetStatusRequest, TaskUpdateRequest, HUMAN_ACTOR,
+    FileAddRequest, FileDeleteRequest, FileUpdateRequest, Service, TaskBlockRequest,
+    TaskNoteRequest, TaskReopenRequest, TaskResumeRequest, TaskSetStatusRequest, TaskUpdateRequest,
+    HUMAN_ACTOR,
 };
 use crate::web::live::Live;
 
@@ -58,6 +59,8 @@ pub fn router(service: Arc<Service>, project: String, live: Live) -> axum::Route
             "/tasks/{number}/files",
             post(upload_file).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),
         )
+        .route("/tasks/{number}/files/{file_id}/update", post(update_file))
+        .route("/tasks/{number}/files/{file_id}/delete", post(delete_file))
         .route("/search", get(search))
         .route("/stats", get(stats))
         .route("/settings", get(settings))
@@ -353,6 +356,42 @@ async fn upload_file(
         })
         .await?;
 
+    Ok(Redirect::to(&format!("/tasks/{number}")))
+}
+
+async fn update_file(
+    State(state): State<AppState>,
+    Path((number, file_id)): Path<(i64, String)>,
+    Form(form): Form<FileCommentForm>,
+) -> Result<Redirect, WebError> {
+    let project = state.current_project().await;
+    state
+        .service
+        .file_update(FileUpdateRequest {
+            project: Some(project),
+            task: Some(number.to_string()),
+            file: Some(file_id),
+            comment: Some(form.comment),
+            role: Some(String::from(HUMAN_ACTOR)),
+        })
+        .await?;
+    Ok(Redirect::to(&format!("/tasks/{number}")))
+}
+
+async fn delete_file(
+    State(state): State<AppState>,
+    Path((number, file_id)): Path<(i64, String)>,
+) -> Result<Redirect, WebError> {
+    let project = state.current_project().await;
+    state
+        .service
+        .file_delete(FileDeleteRequest {
+            project: Some(project),
+            task: Some(number.to_string()),
+            file: Some(file_id),
+            role: Some(String::from(HUMAN_ACTOR)),
+        })
+        .await?;
     Ok(Redirect::to(&format!("/tasks/{number}")))
 }
 
@@ -879,6 +918,8 @@ fn event_label(kind: &str) -> String {
         "stage_returned" => "Этап возвращён",
         "report_added" => "Отчёт добавлен",
         "file_added" => "Файл добавлен",
+        "file_updated" => "Файл изменён",
+        "file_removed" => "Файл удалён",
         other => return other.to_string(),
     };
     label.to_string()
@@ -1022,6 +1063,11 @@ struct StatusCreateForm {
     kind: String,
     sort: Option<i64>,
     color: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct FileCommentForm {
+    comment: String,
 }
 
 #[derive(Deserialize)]

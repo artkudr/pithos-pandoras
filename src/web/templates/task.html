@@ -141,12 +141,8 @@
         <td class="act-col"></td>
         <td colspan="4">
           <form class="form" method="post" action="/tasks/{{ task.number }}/files" enctype="multipart/form-data">
-            <label>Файл
-              <input type="file" name="file" required>
-            </label>
-            <label>Комментарий
-              <input name="comment" placeholder="например, для обновления">
-            </label>
+            <input type="file" name="file" required aria-label="Файл">
+            <input name="comment" placeholder="Комментарий: например, для обновления" aria-label="Комментарий">
             <div class="form-actions">
               <button type="submit" class="form-ok" title="Загрузить файл" aria-label="Загрузить файл"><svg class="icon"><use href="#icon-check"></use></svg></button>
               <button type="button" class="form-cancel" data-toggle="create-file" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
@@ -161,11 +157,26 @@
       {% else %}
         {% for file in files %}
           <tr>
-            <td class="act-col"></td>
+            <td class="act-col">
+              <button type="button" class="row-edit" data-toggle="edit-file-{{ loop.index }}" aria-expanded="false" aria-controls="edit-file-{{ loop.index }}" title="Изменить комментарий" aria-label="Изменить комментарий к файлу {{ file.name }}"><svg class="icon"><use href="#icon-gear"></use></svg></button>
+            </td>
             <td><a class="task-link" href="/files/{{ file.id }}">{{ file.name }}</a></td>
             <td>{% if file.comment.is_empty() %}—{% else %}{{ file.comment }}{% endif %}</td>
             <td class="cell-num">{% if file.size.is_empty() %}—{% else %}{{ file.size }}{% endif %}</td>
             <td class="muted nowrap">{{ file.created_at }}</td>
+          </tr>
+          <tr class="create-row" id="edit-file-{{ loop.index }}" hidden>
+            <td class="act-col"></td>
+            <td colspan="4">
+              <form class="form form-inline" method="post" action="/tasks/{{ task.number }}/files/{{ file.id }}/update">
+                <input name="comment" value="{{ file.comment }}" placeholder="Комментарий" aria-label="Комментарий">
+                <div class="form-actions">
+                  <button type="submit" class="form-ok" title="Сохранить комментарий" aria-label="Сохранить комментарий"><svg class="icon"><use href="#icon-check"></use></svg></button>
+                  <button type="button" class="form-cancel" data-toggle="edit-file-{{ loop.index }}" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+                  <button type="submit" class="form-delete" formaction="/tasks/{{ task.number }}/files/{{ file.id }}/delete" formnovalidate data-confirm="Удалить файл «{{ file.name }}»?" title="Удалить файл" aria-label="Удалить файл {{ file.name }}"><svg class="icon"><use href="#icon-trash"></use></svg></button>
+                </div>
+              </form>
+            </td>
           </tr>
         {% endfor %}
       {% endif %}

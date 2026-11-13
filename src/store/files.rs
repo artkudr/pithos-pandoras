@@ -60,6 +60,27 @@ pub fn get_file(conn: &Connection, file_id: &str) -> Result<FileRecord, StoreErr
         .ok_or(StoreError::NotFound)
 }
 
+pub fn update_comment(
+    conn: &Connection,
+    file_id: &str,
+    comment: &str,
+) -> Result<FileRecord, StoreError> {
+    let changed = conn.execute(
+        "UPDATE files SET comment = ?2 WHERE id = ?1",
+        params![file_id, comment],
+    )?;
+    if changed == 0 {
+        return Err(StoreError::NotFound);
+    }
+    get_file(conn, file_id)
+}
+
+pub fn delete_file(conn: &Connection, file_id: &str) -> Result<FileRecord, StoreError> {
+    let file = get_file(conn, file_id)?;
+    conn.execute("DELETE FROM files WHERE id = ?1", [file_id])?;
+    Ok(file)
+}
+
 pub fn list_files(conn: &Connection, task_id: &str) -> Result<Vec<FileRecord>, StoreError> {
     let sql =
         format!("SELECT {FILE_COLUMNS} FROM files WHERE task_id = ?1 ORDER BY created_at, id");
