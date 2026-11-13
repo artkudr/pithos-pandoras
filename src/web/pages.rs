@@ -192,11 +192,7 @@ async fn task_page(
             .files
             .into_iter()
             .map(|file| {
-                let name = std::path::Path::new(&file.path)
-                    .file_name()
-                    .and_then(|value| value.to_str())
-                    .map(str::to_string)
-                    .unwrap_or_else(|| file.title.clone());
+                let name = file_display_name(&file.path);
                 FileView {
                     id: file.id,
                     name,
@@ -798,6 +794,26 @@ fn sanitize_file_name(name: &str) -> String {
     } else {
         sanitized
     }
+}
+
+/// Имя файла для страницы: у копий убираем служебный uuid-префикс.
+fn display_file_name(name: &str) -> String {
+    match name.find('-') {
+        Some(index) if index == 32 && name[..index].chars().all(|ch| ch.is_ascii_hexdigit()) => {
+            name[index + 1..].to_string()
+        }
+        _ => name.to_string(),
+    }
+}
+
+/// Имя файла для страницы: последний сегмент пути без служебного uuid-префикса.
+fn file_display_name(path: &str) -> String {
+    let name = std::path::Path::new(path)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .or_else(|| path.rsplit(['\\', '/']).find(|part| !part.is_empty()));
+    name.map(display_file_name)
+        .unwrap_or_else(|| String::from("файл"))
 }
 
 fn render<T: Template>(template: T) -> Result<Html<String>, WebError> {
