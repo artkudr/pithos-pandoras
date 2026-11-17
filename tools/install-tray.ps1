@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [string]$Exe = ""
 )
@@ -18,7 +18,7 @@ $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($link)
 $shortcut.TargetPath = $Exe
 $shortcut.WorkingDirectory = $root
-$shortcut.IconLocation = $Exe
+$shortcut.IconLocation = Join-Path $root 'assets\icon.ico'
 $shortcut.Description = 'PithosPandoras — локальный сервис задач'
 $shortcut.Save()
 

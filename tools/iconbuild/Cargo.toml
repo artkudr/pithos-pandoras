@@ -1,0 +1,10 @@
+[package]
+name = "iconbuild"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Отдельный инструмент: в сборку приложения не входит.
+[dependencies]
+resvg = { version = "0.45", features = ["text", "system-fonts"] }
+png = "0.17"

@@ -38,7 +38,11 @@ impl ApplicationHandler<UserEvent> for TrayApp {
         }
 
         if self.tray.is_none() {
-            match build_tray() {
+            let scale = event_loop
+                .primary_monitor()
+                .map(|monitor| monitor.scale_factor())
+                .unwrap_or(1.0);
+            match build_tray(scale) {
                 Ok(tray) => self.tray = Some(tray),
                 Err(err) => {
                     tracing::error!(%err, "не удалось создать иконку в трее");
@@ -91,7 +95,7 @@ fn open_page(url: &str) {
     }
 }
 
-fn build_tray() -> anyhow::Result<TrayIcon> {
+fn build_tray(scale: f64) -> anyhow::Result<TrayIcon> {
     let menu = Menu::new();
     let open = MenuItem::with_id("open", "Открыть страницу", true, None);
     let quit = MenuItem::with_id("quit", "Выход", true, None);
@@ -102,26 +106,24 @@ fn build_tray() -> anyhow::Result<TrayIcon> {
         .with_menu_on_left_click(false)
         .with_menu_on_right_click(true)
         .with_tooltip("PithosPandoras")
-        .with_icon(tray_icon_image()?)
+        .with_icon(tray_icon_image(scale)?)
         .build()?;
     Ok(tray)
 }
 
-fn tray_icon_image() -> anyhow::Result<Icon> {
-    let size = 32_u32;
-    let mut rgba = Vec::with_capacity((size * size * 4) as usize);
-    for y in 0..size {
-        for x in 0..size {
-            let border = x < 2 || y < 2 || x >= size - 2 || y >= size - 2;
-            let (r, g, b, a) = if border {
-                (24, 28, 42, 255)
-            } else {
-                (92, 122, 255, 255)
-            };
-            rgba.extend_from_slice(&[r, g, b, a]);
-        }
-    }
-    Icon::from_rgba(rgba, size, size).map_err(|err| anyhow::anyhow!("иконка: {err}"))
+/// Значок трея под масштаб экрана: 16, 24 или 32 точки.
+///
+/// Файлы собирает `tools/icon.ps1` из `assets/icon.svg`.
+fn tray_icon_image(scale: f64) -> anyhow::Result<Icon> {
+    let pixels = (16.0 * scale).round() as u32;
+    let (size, rgba): (u32, &'static [u8]) = if pixels >= 28 {
+        (32, include_bytes!("../assets/tray-32.rgba"))
+    } else if pixels >= 20 {
+        (24, include_bytes!("../assets/tray-24.rgba"))
+    } else {
+        (16, include_bytes!("../assets/tray-16.rgba"))
+    };
+    Icon::from_rgba(rgba.to_vec(), size, size).map_err(|err| anyhow::anyhow!("иконка: {err}"))
 }
 
 pub fn run() -> anyhow::Result<()> {

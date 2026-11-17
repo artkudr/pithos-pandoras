@@ -9,6 +9,7 @@
 *.jpeg binary
 *.gif binary
 *.ico binary
+*.rgba binary
 *.db binary
 *.db-wal binary
 *.db-shm binary
