@@ -30,7 +30,7 @@
 
 <section class="card">
   <h2>Постановка</h2>
-  <p class="statement">{{ task.statement }}</p>
+  <div class="markdown statement">{{ task.statement_html|safe }}</div>
   <dl class="meta">
     <dt>Папка</dt><dd>{{ task.folder_name }}</dd>
     <dt>Создана</dt><dd>{{ task.created_at }}</dd>
@@ -66,54 +66,52 @@
   {% endif %}
 </section>
 
-<section class="card">
-  <h2>Комментарии</h2>
-  <div class="table-wrap">
-    <table class="board">
-      <thead>
+<h2 class="sr-only">Комментарии</h2>
+<div class="table-wrap">
+  <table class="board">
+    <thead>
+      <tr>
+        <th class="act-col">
+          <button type="button" class="add-button" data-toggle="create-comment" aria-expanded="false" aria-controls="create-comment" title="Написать комментарий" aria-label="Написать комментарий"><svg class="icon"><use href="#icon-plus"></use></svg></button>
+          <span class="sr-only">Действие</span>
+        </th>
+        <th>Комментарий</th>
+        <th>Кто</th>
+        <th>Когда</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="create-row" id="create-comment" hidden>
+        <td class="act-col"></td>
+        <td colspan="3">
+          <form class="form" method="post" action="/p/{{ project_path }}/tasks/{{ task.number }}/note">
+            <label>Комментарий
+              <textarea name="text" rows="3" required></textarea>
+            </label>
+            <div class="form-actions">
+              <button type="submit" class="form-ok" title="Добавить комментарий" aria-label="Добавить комментарий"><svg class="icon"><use href="#icon-check"></use></svg></button>
+              <button type="button" class="form-cancel" data-toggle="create-comment" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% if comments.is_empty() %}
         <tr>
-          <th class="act-col">
-            <button type="button" class="add-button" data-toggle="create-comment" aria-expanded="false" aria-controls="create-comment" title="Написать комментарий" aria-label="Написать комментарий"><svg class="icon"><use href="#icon-plus"></use></svg></button>
-            <span class="sr-only">Действие</span>
-          </th>
-          <th>Комментарий</th>
-          <th>Кто</th>
-          <th>Когда</th>
+          <td colspan="4" class="muted">Комментариев пока нет. Нажмите «+», чтобы написать.</td>
         </tr>
-      </thead>
-      <tbody>
-        <tr class="create-row" id="create-comment" hidden>
-          <td class="act-col"></td>
-          <td colspan="3">
-            <form class="form" method="post" action="/p/{{ project_path }}/tasks/{{ task.number }}/note">
-              <label>Комментарий
-                <textarea name="text" rows="3" required></textarea>
-              </label>
-              <div class="form-actions">
-                <button type="submit" class="form-ok" title="Добавить комментарий" aria-label="Добавить комментарий"><svg class="icon"><use href="#icon-check"></use></svg></button>
-                <button type="button" class="form-cancel" data-toggle="create-comment" title="Отменить" aria-label="Отменить"><svg class="icon"><use href="#icon-cross"></use></svg></button>
-              </div>
-            </form>
-          </td>
-        </tr>
-        {% if comments.is_empty() %}
+      {% else %}
+        {% for comment in comments %}
           <tr>
-            <td colspan="4" class="muted">Комментариев пока нет. Нажмите «+», чтобы написать.</td>
+            <td class="act-col"></td>
+            <td class="markdown">{{ comment.html|safe }}</td>
+            <td class="muted nowrap">{{ comment.author }}</td>
+            <td class="muted nowrap">{{ comment.created_at }}</td>
           </tr>
-        {% else %}
-          {% for comment in comments %}
-            <tr>
-              <td class="act-col"></td>
-              <td class="comment-text">{{ comment.body }}</td>
-              <td class="muted nowrap">{{ comment.author }}</td>
-              <td class="muted nowrap">{{ comment.created_at }}</td>
-            </tr>
-          {% endfor %}
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
-</section>
+        {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
 
 <h2 class="sr-only">Файлы</h2>
 {% if folder_missing %}
@@ -184,35 +182,33 @@
   </table>
 </div>
 
-<section class="card">
-  <h2>История</h2>
-  <div class="table-wrap">
-    <table class="board">
-      <thead>
+<h2 class="sr-only">История</h2>
+<div class="table-wrap">
+  <table class="board">
+    <thead>
+      <tr>
+        <th>Событие</th>
+        <th>Кто</th>
+        <th>Когда</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if events.is_empty() %}
         <tr>
-          <th>Событие</th>
-          <th>Кто</th>
-          <th>Когда</th>
+          <td colspan="3" class="muted">Событий пока нет.</td>
         </tr>
-      </thead>
-      <tbody>
-        {% if events.is_empty() %}
+      {% else %}
+        {% for event in events %}
           <tr>
-            <td colspan="3" class="muted">Событий пока нет.</td>
+            <td>{{ event.label }}</td>
+            <td class="muted">{{ event.actor }}</td>
+            <td class="muted nowrap">{{ event.at }}</td>
           </tr>
-        {% else %}
-          {% for event in events %}
-            <tr>
-              <td>{{ event.label }}</td>
-              <td class="muted">{{ event.actor }}</td>
-              <td class="muted nowrap">{{ event.at }}</td>
-            </tr>
-          {% endfor %}
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
-</section>
+        {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
 
 <section class="card actions">
   <h2>Действия</h2>

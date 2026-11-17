@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use std::path::Path as FsPath;
 use std::sync::Arc;
 
@@ -175,6 +176,7 @@ async fn task_page(
         task: TaskView {
             number: data.task.number,
             title: data.task.title,
+            statement_html: render_markdown(&data.task.statement),
             statement: data.task.statement,
             status: status_title,
             status_id,
@@ -223,7 +225,7 @@ async fn task_page(
             .into_iter()
             .map(|comment| CommentView {
                 author: comment.author,
-                body: comment.body,
+                html: render_markdown(&comment.body),
                 created_at: format_local_time(&comment.created_at),
             })
             .collect(),
@@ -900,11 +902,31 @@ fn render<T: Template>(template: T) -> Result<Html<String>, WebError> {
 }
 
 fn render_markdown(text: &str) -> String {
-    let parser = pulldown_cmark::Parser::new(text);
+    let mut options = pulldown_cmark::Options::empty();
+    options.insert(pulldown_cmark::Options::ENABLE_TABLES);
+    // Агенты пишут отчёты строками без пустой между ними. По Markdown это
+    // мягкий перенос, и браузер склеивает строки пробелом — читать невозможно.
+    // Считаем каждый перенос строки жёстким: автор текста так и задумывал.
+    let parser = pulldown_cmark::Parser::new_ext(text, options).map(|event| match event {
+        pulldown_cmark::Event::SoftBreak => pulldown_cmark::Event::HardBreak,
+        other => other,
+    });
     let mut html = String::new();
     pulldown_cmark::html::push_html(&mut html, parser);
+    // Таблица Markdown получает ту же обёртку и вид, что таблицы страниц.
+    let html = html
+        .replace(
+            "<table>",
+            "<div class=\"table-wrap\"><table class=\"board\">",
+        )
+        .replace("</table>", "</table></div>");
     ammonia::Builder::default()
         .url_relative(ammonia::UrlRelative::PassThrough)
+        // Классы нужны таблицам; остальные (подсветка кода) не используем.
+        .allowed_classes(HashMap::from([
+            ("div", HashSet::from(["table-wrap"])),
+            ("table", HashSet::from(["board"])),
+        ]))
         .clean(&html)
         .to_string()
 }
@@ -1243,6 +1265,9 @@ struct StatusOptionView {
 struct TaskView {
     number: i64,
     title: String,
+    /// Постановка как HTML: markdown отрисован и очищен.
+    statement_html: String,
+    /// Исходный текст для формы правки.
     statement: String,
     status: String,
     status_id: String,
@@ -1279,7 +1304,8 @@ struct FileView {
 
 struct CommentView {
     author: String,
-    body: String,
+    /// Текст комментария как HTML: markdown отрисован и очищен.
+    html: String,
     created_at: String,
 }
 
@@ -1369,5 +1395,43 @@ impl IntoResponse for WebError {
                 (self.status, self.message).into_response()
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::render_markdown;
+
+    #[test]
+    fn statement_markdown_renders_headings_and_lists() {
+        let html =
+            render_markdown("## Что сделать\n\n1. Проверить координаты\n2. Починить источник");
+        assert!(html.contains("<h2>Что сделать</h2>"), "{html}");
+        assert!(html.contains("<ol>"), "{html}");
+        assert!(html.contains("<li>Проверить координаты</li>"), "{html}");
+    }
+
+    #[test]
+    fn single_line_break_is_rendered_as_break() {
+        let html = render_markdown("Где читается: Creature.java:5267\nСмежные: Attackable.java");
+        assert!(html.contains("<br>"), "{html}");
+        assert!(html.contains("Где читается: Creature.java:5267"), "{html}");
+        assert!(html.contains("Смежные: Attackable.java"), "{html}");
+    }
+
+    #[test]
+    fn statement_markdown_strips_scripts() {
+        let html = render_markdown("текст <script>alert(1)</script>");
+        assert!(!html.contains("<script"), "{html}");
+    }
+
+    #[test]
+    fn markdown_table_is_rendered_and_wrapped() {
+        let html = render_markdown("| файл | что |\n| --- | --- |\n| client-01.png | геймпад |");
+        assert!(html.contains("<table class=\"board\">"), "{html}");
+        assert!(html.contains("<div class=\"table-wrap\">"), "{html}");
+        assert!(html.contains("<th>файл</th>"), "{html}");
+        assert!(html.contains("<td>client-01.png</td>"), "{html}");
+        assert!(!html.contains("|"), "{html}");
     }
 }
