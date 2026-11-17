@@ -39,6 +39,7 @@ cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-features
 tools/check.ps1        # всё сразу
+tools/package.ps1      # релиз и архив в dist/
 ```
 
 ## Индекс
@@ -95,6 +96,7 @@ cargo build --release --bin pithos-pandoras-tray
 ```
 
 Консоли нет; лог — `pithos-pandoras.log`. Автозапуск: `tools/install-tray.ps1`.
+Архив для выдачи — `tools/package.ps1`, результат в `dist/` (в git не попадает).
 
 ## Память
 
