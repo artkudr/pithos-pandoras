@@ -697,6 +697,7 @@ impl Service {
         let started_at = db::now_rfc3339();
         let task_id_for_write = task_id.clone();
         let role_for_write = role_owned.clone();
+        let project_id = project.id.clone();
 
         let stage = self
             .store
@@ -709,6 +710,14 @@ impl Service {
                     round,
                     &started_at,
                 )?;
+                // Задача, у которой ещё не было этапов, при старте первого
+                // переходит из «Новой» в «В работе». Ручные «Ожидание»
+                // и «Остановлена» не трогаем.
+                let current = tasks::get_task_by_id(&tx, &task_id_for_write)?;
+                if current.status_id == "new" {
+                    let active = tasks::status_by_kind(&tx, &project_id, "active")?;
+                    tasks::set_status(&tx, &task_id_for_write, &active.id)?;
+                }
                 let payload =
                     serde_json::json!({"role": &role_for_write, "round": round}).to_string();
                 events::insert_event(
@@ -716,7 +725,7 @@ impl Service {
                     &task_id_for_write,
                     "stage_started",
                     Some(&stage.id),
-                    None,
+                    Some(&role_for_write),
                     &payload,
                     "agent",
                 )?;
@@ -777,6 +786,7 @@ impl Service {
         let title_for_write = title.clone();
         let report_for_write = report.clone();
         let verdict_for_write = verdict.clone();
+        let role_for_write = role_owned.clone();
 
         let result = self
             .store
@@ -809,7 +819,7 @@ impl Service {
                     &task_id_for_write,
                     "stage_finished",
                     Some(&stage_id),
-                    None,
+                    Some(&role_for_write),
                     &payload,
                     "agent",
                 )?;
@@ -825,7 +835,7 @@ impl Service {
                         &task_id_for_write,
                         "stage_returned",
                         Some(&stage_id),
-                        None,
+                        Some(&role_for_write),
                         &payload,
                         "agent",
                     )?;
@@ -940,6 +950,7 @@ impl Service {
         let now = db::now_rfc3339();
         let kind_for_write = kind.clone();
         let title_for_write = title.clone();
+        let role_for_write = role.clone();
         let result = self
             .store
             .write(move |conn| {
@@ -962,7 +973,7 @@ impl Service {
                     &task_id,
                     "report_added",
                     Some(&stage_id),
-                    None,
+                    Some(&role_for_write),
                     &payload,
                     "agent",
                 )?;

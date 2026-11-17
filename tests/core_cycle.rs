@@ -448,6 +448,86 @@ async fn block_finishes_stage_and_resume_clears_waiting() {
 }
 
 #[tokio::test]
+async fn stage_start_moves_new_task_to_active_and_records_role() {
+    let (service, _dir) = setup("{}").await;
+    let task = create_task(&service, "Статус этапа").await;
+    let task_ref = task.task.number.to_string();
+    assert_eq!(task.task.status_id, "new");
+
+    service
+        .stage_start(start_req(&task_ref, "Исполнитель"))
+        .await
+        .unwrap();
+
+    let card = service
+        .task_get(Some(String::from("PithosPandoras")), Some(task_ref.clone()))
+        .await
+        .unwrap();
+    assert_eq!(card.task.status_id, "active");
+
+    service
+        .stage_finish(StageFinishRequest {
+            project: Some(String::from("PithosPandoras")),
+            task: Some(task_ref.clone()),
+            role: Some(String::from("Исполнитель")),
+            verdict: Some(String::from("готово")),
+            report: Some(String::from("сделано")),
+            kind: None,
+        })
+        .await
+        .unwrap();
+
+    let timeline = service
+        .task_timeline(Some(String::from("PithosPandoras")), Some(task_ref))
+        .await
+        .unwrap();
+    let started = timeline
+        .iter()
+        .find(|event| event.kind == "stage_started")
+        .unwrap();
+    assert_eq!(started.actor.as_deref(), Some("Исполнитель"));
+    let finished = timeline
+        .iter()
+        .find(|event| event.kind == "stage_finished")
+        .unwrap();
+    assert_eq!(finished.actor.as_deref(), Some("Исполнитель"));
+}
+
+#[tokio::test]
+async fn stage_start_keeps_waiting_status() {
+    let (service, _dir) = setup("{}").await;
+    let task = create_task(&service, "Ждёт").await;
+    let task_ref = task.task.number.to_string();
+
+    service
+        .stage_start(start_req(&task_ref, "Исполнитель"))
+        .await
+        .unwrap();
+    service
+        .task_block(TaskBlockRequest {
+            project: Some(String::from("PithosPandoras")),
+            task: Some(task_ref.clone()),
+            role: Some(String::from("Исполнитель")),
+            reason: Some(String::from("нужны данные")),
+            waiting_for: Some(String::from("человек")),
+            waiting_ref: None,
+        })
+        .await
+        .unwrap();
+
+    service
+        .stage_start(start_req(&task_ref, "Исполнитель"))
+        .await
+        .unwrap();
+
+    let card = service
+        .task_get(Some(String::from("PithosPandoras")), Some(task_ref))
+        .await
+        .unwrap();
+    assert_eq!(card.task.status_id, "waiting");
+}
+
+#[tokio::test]
 async fn file_add_stays_inside_project_root() {
     let (service, dir) = setup("{}").await;
     let task = create_task(&service, "Файл").await;

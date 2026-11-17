@@ -13,7 +13,7 @@ use rmcp::transport::streamable_http_server::session::local::LocalSessionManager
 use rmcp::transport::streamable_http_server::{StreamableHttpServerConfig, StreamableHttpService};
 use rmcp::{tool, tool_handler, tool_router, Json, ServerHandler};
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::domain::{
     AppError, Comment, ErrorCode as AppErrorCode, Event, FileAdded, FileRecord, NextStep,
@@ -55,12 +55,14 @@ pub struct TaskListArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskGetArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct StageStartArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
 }
@@ -68,6 +70,7 @@ pub struct StageStartArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct StageFinishArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
     pub verdict: Option<String>,
@@ -78,6 +81,7 @@ pub struct StageFinishArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReportAddArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
     pub kind: Option<String>,
@@ -88,6 +92,7 @@ pub struct ReportAddArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReportGetArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub report: Option<String>,
 }
@@ -95,6 +100,7 @@ pub struct ReportGetArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReportPutArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
     pub kind: Option<String>,
@@ -105,6 +111,7 @@ pub struct ReportPutArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskCloseArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
 }
@@ -112,6 +119,7 @@ pub struct TaskCloseArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskBlockArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
     pub reason: Option<String>,
@@ -122,6 +130,7 @@ pub struct TaskBlockArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskResumeArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
     pub reason: Option<String>,
@@ -130,6 +139,7 @@ pub struct TaskResumeArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskReopenArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
     pub reason: Option<String>,
@@ -138,6 +148,7 @@ pub struct TaskReopenArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskNoteArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
     pub text: Option<String>,
@@ -146,12 +157,14 @@ pub struct TaskNoteArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskTimelineArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskUpdateArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
     pub title: Option<String>,
@@ -161,6 +174,7 @@ pub struct TaskUpdateArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskSetStatusArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
     pub status: Option<String>,
@@ -169,6 +183,7 @@ pub struct TaskSetStatusArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TaskNextArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
 }
 
@@ -186,6 +201,7 @@ pub struct TaskSearchArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct FileAddArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
     pub path: Option<String>,
@@ -197,8 +213,30 @@ pub struct FileAddArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct FileGetArgs {
     pub project: Option<String>,
+    /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub file: Option<String>,
+}
+
+/// Ответ `task_list`: задачи лежат в объекте, а не в массиве.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct TaskListResponse {
+    /// Задачи проекта.
+    pub tasks: Vec<TaskListItem>,
+}
+
+/// Ответ `task_search`: найденные задачи лежат в объекте.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct TaskSearchResponse {
+    /// Задачи, в текстах которых нашлось совпадение.
+    pub tasks: Vec<TaskListItem>,
+}
+
+/// Ответ `task_timeline`: события задачи лежат в объекте.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct TaskTimelineResponse {
+    /// События задачи по порядку.
+    pub events: Vec<Event>,
 }
 
 #[tool_router(router = tool_router)]
@@ -251,11 +289,11 @@ impl PithosServer {
     pub async fn task_list(
         &self,
         Parameters(args): Parameters<TaskListArgs>,
-    ) -> Result<Json<Vec<TaskListItem>>, ErrorData> {
+    ) -> Result<Json<TaskListResponse>, ErrorData> {
         self.service
             .task_list(args.project)
             .await
-            .map(Json)
+            .map(|tasks| Json(TaskListResponse { tasks }))
             .map_err(Into::into)
     }
 
@@ -468,11 +506,11 @@ impl PithosServer {
     pub async fn task_timeline(
         &self,
         Parameters(args): Parameters<TaskTimelineArgs>,
-    ) -> Result<Json<Vec<Event>>, ErrorData> {
+    ) -> Result<Json<TaskTimelineResponse>, ErrorData> {
         self.service
             .task_timeline(args.project, args.task)
             .await
-            .map(Json)
+            .map(|events| Json(TaskTimelineResponse { events }))
             .map_err(Into::into)
     }
 
@@ -542,11 +580,11 @@ impl PithosServer {
     pub async fn task_search(
         &self,
         Parameters(args): Parameters<TaskSearchArgs>,
-    ) -> Result<Json<Vec<TaskListItem>>, ErrorData> {
+    ) -> Result<Json<TaskSearchResponse>, ErrorData> {
         self.service
             .task_search(args.project, args.query)
             .await
-            .map(Json)
+            .map(|tasks| Json(TaskSearchResponse { tasks }))
             .map_err(Into::into)
     }
 
@@ -658,4 +696,25 @@ pub fn router(service: Arc<Service>, key: String) -> axum::Router {
 
 async fn health() -> &'static str {
     "ok"
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn list_responses_are_objects() {
+        let list = serde_json::to_value(TaskListResponse { tasks: Vec::new() }).unwrap();
+        assert!(list.is_object());
+        assert_eq!(list["tasks"], serde_json::json!([]));
+
+        let search = serde_json::to_value(TaskSearchResponse { tasks: Vec::new() }).unwrap();
+        assert!(search.is_object());
+        assert_eq!(search["tasks"], serde_json::json!([]));
+
+        let timeline = serde_json::to_value(TaskTimelineResponse { events: Vec::new() }).unwrap();
+        assert!(timeline.is_object());
+        assert_eq!(timeline["events"], serde_json::json!([]));
+    }
 }
