@@ -63,7 +63,7 @@ god_nodes
 ## MCP
 
 Сервер на `/mcp` требует `Authorization: Bearer <ключ из pithos-pandoras.key>`.
-Ключ в git не класть.
+Ключ печатает `cargo run -- key`. Ключ в git не класть.
 
 ## Страница
 

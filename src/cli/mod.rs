@@ -1,4 +1,4 @@
-//! CLI приложения: serve, init, doctor, import, backup.
+//! CLI приложения: serve, init, doctor, key, import, backup.
 
 pub mod backup;
 mod import;
@@ -29,6 +29,8 @@ pub enum Command {
     Init(InitArgs),
     /// Проверить базу, схему и открытые этапы
     Doctor(DoctorArgs),
+    /// Показать ключ доступа MCP
+    Key(KeyArgs),
     /// Импортировать старые задачи из папки
     Import(import::ImportArgs),
     /// Сделать копию базы
@@ -92,6 +94,12 @@ pub struct DoctorArgs {
     pub db: PathBuf,
 }
 
+#[derive(Debug, Args)]
+pub struct KeyArgs {
+    #[arg(long, default_value = "pithos-pandoras.key")]
+    pub key_file: PathBuf,
+}
+
 pub async fn run(cli: Cli) -> anyhow::Result<()> {
     match cli
         .command
@@ -100,6 +108,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         Command::Serve(args) => serve(args).await,
         Command::Init(args) => init(args).await,
         Command::Doctor(args) => doctor(args).await,
+        Command::Key(args) => key(args),
         Command::Import(args) => import_old(args).await,
         Command::Backup(args) => backup::run(args).await,
     }
@@ -144,6 +153,25 @@ async fn serve(args: ServeArgs) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Ключ из файла. `None`, если файла нет или он пуст.
+pub(crate) fn read_key(key_file: &Path) -> anyhow::Result<Option<String>> {
+    if !key_file.exists() {
+        return Ok(None);
+    }
+    let key = std::fs::read_to_string(key_file)
+        .with_context(|| format!("прочитать ключ {}", key_file.display()))?;
+    let key = key.trim().to_string();
+    Ok(if key.is_empty() { None } else { Some(key) })
+}
+
+/// Новый ключ и запись его в файл.
+pub(crate) fn create_key(key_file: &Path) -> anyhow::Result<String> {
+    let key = uuid::Uuid::now_v7().simple().to_string();
+    std::fs::write(key_file, &key)
+        .with_context(|| format!("записать ключ {}", key_file.display()))?;
+    Ok(key)
+}
+
 pub(crate) fn load_or_create_key(key: Option<&str>, key_file: &Path) -> anyhow::Result<String> {
     if let Some(key) = key {
         let key = key.trim();
@@ -153,20 +181,28 @@ pub(crate) fn load_or_create_key(key: Option<&str>, key_file: &Path) -> anyhow::
         return Ok(key.to_string());
     }
 
-    if key_file.exists() {
-        let key = std::fs::read_to_string(key_file)
-            .with_context(|| format!("прочитать ключ {}", key_file.display()))?;
-        let key = key.trim().to_string();
-        if !key.is_empty() {
-            return Ok(key);
-        }
+    if let Some(key) = read_key(key_file)? {
+        return Ok(key);
     }
 
-    let key = uuid::Uuid::now_v7().simple().to_string();
-    std::fs::write(key_file, &key)
-        .with_context(|| format!("записать ключ {}", key_file.display()))?;
+    let key = create_key(key_file)?;
     println!("MCP key: {key}");
     Ok(key)
+}
+
+/// Печатает ключ, чтобы его можно было скопировать. В stderr — откуда он взят.
+fn key(args: KeyArgs) -> anyhow::Result<()> {
+    let (key, created) = match read_key(&args.key_file)? {
+        Some(key) => (key, false),
+        None => (create_key(&args.key_file)?, true),
+    };
+    println!("{key}");
+    if created {
+        eprintln!("Ключ создан: {}", args.key_file.display());
+    } else {
+        eprintln!("Ключ из файла: {}", args.key_file.display());
+    }
+    Ok(())
 }
 
 async fn import_old(args: import::ImportArgs) -> anyhow::Result<()> {
@@ -269,4 +305,46 @@ async fn doctor(args: DoctorArgs) -> anyhow::Result<()> {
     println!("port_8787: {}", if port_free { "free" } else { "busy" });
 
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_key_returns_none_for_missing_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("pithos-pandoras.key");
+        assert_eq!(read_key(&file).unwrap(), None);
+    }
+
+    #[test]
+    fn created_key_is_read_back_without_trailing_newline() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("pithos-pandoras.key");
+
+        let key = create_key(&file).unwrap();
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), key);
+        assert_eq!(read_key(&file).unwrap().as_deref(), Some(key.as_str()));
+    }
+
+    #[test]
+    fn blank_key_file_counts_as_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("pithos-pandoras.key");
+        std::fs::write(&file, " \n").unwrap();
+        assert_eq!(read_key(&file).unwrap(), None);
+    }
+
+    #[test]
+    fn explicit_key_wins_over_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("pithos-pandoras.key");
+        std::fs::write(&file, "from-file").unwrap();
+
+        let key = load_or_create_key(Some(" from-args "), &file).unwrap();
+        assert_eq!(key, "from-args");
+        assert_eq!(read_key(&file).unwrap().as_deref(), Some("from-file"));
+    }
 }

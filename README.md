@@ -23,6 +23,7 @@ tools/setup-dev.ps1
 cargo run -- init --project PithosPandoras --root . --db pithos-pandoras.db
 cargo run -- serve --db pithos-pandoras.db
 cargo run -- doctor --db pithos-pandoras.db
+cargo run -- key                    # ключ доступа MCP
 cargo run -- backup --db pithos-pandoras.db
 
 tools/check.ps1          # форматирование, clippy, тесты, cargo deny
@@ -32,6 +33,7 @@ tools/check.ps1          # форматирование, clippy, тесты, car
 `http://127.0.0.1:8787/` — редирект в проект по умолчанию; список проектов —
 `/projects`, доска проекта — `/p/{project}`.
 При первом запуске `serve` создаёт `pithos-pandoras.key` и печатает ключ.
+Показать ключ в любой момент — `cargo run -- key` (печатает только ключ).
 Клиент MCP передаёт `Authorization: Bearer <ключ>`.
 
 Есть также Windows-трей, копия базы (`backup`) и живое обновление страницы
