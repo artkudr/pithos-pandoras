@@ -11,9 +11,11 @@ pub enum ErrorCode {
     TaskMissing,
     TaskUnknown,
     FieldMissing,
+    FieldInvalid,
     InputMissing,
     Conflict,
     NotFound,
+    FileNotFound,
     Io,
 }
 
@@ -27,9 +29,11 @@ impl ErrorCode {
             Self::TaskMissing => "task_missing",
             Self::TaskUnknown => "task_unknown",
             Self::FieldMissing => "field_missing",
+            Self::FieldInvalid => "field_invalid",
             Self::InputMissing => "input_missing",
             Self::Conflict => "conflict",
             Self::NotFound => "not_found",
+            Self::FileNotFound => "file_not_found",
             Self::Io => "io",
         }
     }
@@ -45,6 +49,12 @@ pub struct AppError {
     pub hint: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allowed: Option<Vec<String>>,
+    /// Путь, с которым работали. Заполняется у ошибок файла.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<Box<str>>,
+    /// Абсолютные пути, которые сервис проверил. Заполняется у `file_not_found`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tried: Option<Box<[String]>>,
 }
 
 impl AppError {
@@ -54,6 +64,8 @@ impl AppError {
             message: message.into(),
             hint: None,
             allowed: None,
+            path: None,
+            tried: None,
         }
     }
 
@@ -64,6 +76,16 @@ impl AppError {
 
     pub fn with_allowed(mut self, allowed: Vec<String>) -> Self {
         self.allowed = Some(allowed);
+        self
+    }
+
+    pub fn with_path(mut self, path: impl Into<String>) -> Self {
+        self.path = Some(path.into().into_boxed_str());
+        self
+    }
+
+    pub fn with_tried(mut self, tried: Vec<String>) -> Self {
+        self.tried = Some(tried.into_boxed_slice());
         self
     }
 
@@ -111,6 +133,21 @@ impl AppError {
             ErrorCode::FieldMissing,
             format!("Не заполнено обязательное поле `{field}`"),
         )
+    }
+
+    pub fn field_invalid(field: &str, reason: impl Into<String>) -> Self {
+        Self::new(
+            ErrorCode::FieldInvalid,
+            format!("Поле `{field}` заполнено неверно"),
+        )
+        .with_hint(reason)
+    }
+
+    pub fn file_not_found(path: &str, tried: Vec<String>) -> Self {
+        Self::new(ErrorCode::FileNotFound, format!("Файл `{path}` не найден"))
+            .with_path(path)
+            .with_tried(tried)
+            .with_hint("Путь считается от корня проекта. Проверьте имя файла и папку задачи.")
     }
 
     pub fn input_missing(role: &str, kind: &str, round: &str) -> Self {

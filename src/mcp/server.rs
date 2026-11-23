@@ -16,14 +16,16 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::{
-    AppError, Comment, ErrorCode as AppErrorCode, Event, FileAdded, FileRecord, NextStep,
-    ProjectView, Report, StageFinish, StageStart, Task, TaskCard, TaskCreated, TaskListItem,
-    TaskStats,
+    AppError, Comment, DraftRevision, ErrorCode as AppErrorCode, Event, FileAdded, FileRecord,
+    NextStep, ProjectView, Report, ReportDraft, ReportDraftDocument, ReportPublished, Stage,
+    StageFinish, StageStart, StageStatus, Task, TaskCard, TaskCreated, TaskListItem, TaskStats,
 };
 use crate::service::{
-    FileAddRequest, FileGetRequest, ReportAddRequest, ReportGetRequest, ReportPutRequest, Service,
-    StageFinishRequest, StageStartRequest, TaskBlockRequest, TaskCloseRequest, TaskCreateRequest,
-    TaskNoteRequest, TaskReopenRequest, TaskResumeRequest, TaskSetStatusRequest, TaskUpdateRequest,
+    FileAddRequest, FileGetRequest, ReportAddRequest, ReportAppendRequest, ReportDiscardRequest,
+    ReportGetRequest, ReportOpenRequest, ReportPublishRequest, ReportPutRequest,
+    ReportSectionRequest, Service, StageFinishRequest, StageNoteRequest, StageStartRequest,
+    TaskBlockRequest, TaskCloseRequest, TaskCreateRequest, TaskNoteRequest, TaskReopenRequest,
+    TaskResumeRequest, TaskSetStatusRequest, TaskUpdateRequest,
 };
 
 #[derive(Clone)]
@@ -68,13 +70,30 @@ pub struct StageStartArgs {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+pub struct StageGetArgs {
+    pub project: Option<String>,
+    /// Номер задачи строкой или её id.
+    pub task: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct StageNoteArgs {
+    pub project: Option<String>,
+    /// Номер задачи строкой или её id.
+    pub task: Option<String>,
+    pub role: Option<String>,
+    pub text: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct StageFinishArgs {
     pub project: Option<String>,
     /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
     pub verdict: Option<String>,
-    pub report: Option<String>,
+    /// Опубликованный отчёт из `report_publish`.
+    pub report_id: Option<String>,
     pub kind: Option<String>,
 }
 
@@ -94,7 +113,8 @@ pub struct ReportGetArgs {
     pub project: Option<String>,
     /// Номер задачи строкой или её id.
     pub task: Option<String>,
-    pub report: Option<String>,
+    /// Идентификатор отчёта из `task_get.reports[]` или `report_publish`.
+    pub report_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -106,6 +126,55 @@ pub struct ReportPutArgs {
     pub kind: Option<String>,
     pub title: Option<String>,
     pub content: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ReportOpenArgs {
+    pub project: Option<String>,
+    /// Номер задачи строкой или её id.
+    pub task: Option<String>,
+    pub role: Option<String>,
+    /// Вид: report, plan, acceptance, guide.
+    pub kind: Option<String>,
+    pub title: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ReportSectionArgs {
+    pub draft_id: Option<String>,
+    pub role: Option<String>,
+    /// Ключ раздела: summary, checks, changes, d1 и т. п.
+    pub key: Option<String>,
+    pub title: Option<String>,
+    pub body: Option<String>,
+    pub order: Option<i64>,
+    pub expected_revision: Option<i64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ReportAppendArgs {
+    pub draft_id: Option<String>,
+    pub role: Option<String>,
+    pub text: Option<String>,
+    pub expected_revision: Option<i64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ReportDraftGetArgs {
+    pub draft_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ReportPublishArgs {
+    pub draft_id: Option<String>,
+    pub role: Option<String>,
+    pub expected_revision: Option<i64>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ReportDiscardArgs {
+    pub draft_id: Option<String>,
+    pub role: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -204,7 +273,10 @@ pub struct FileAddArgs {
     /// Номер задачи строкой или её id.
     pub task: Option<String>,
     pub role: Option<String>,
+    /// Путь к файлу: абсолютный или от корня проекта.
     pub path: Option<String>,
+    /// Имя файла внутри папки задачи. Взаимоисключающе с `path`.
+    pub file_name: Option<String>,
     pub title: Option<String>,
     pub comment: Option<String>,
     pub kind: Option<String>,
@@ -237,6 +309,12 @@ pub struct TaskSearchResponse {
 pub struct TaskTimelineResponse {
     /// События задачи по порядку.
     pub events: Vec<Event>,
+}
+
+/// Ответ `report_discard`: черновик удалён.
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct DiscardResponse {
+    pub discarded: bool,
 }
 
 #[tool_router(router = tool_router)]
@@ -332,8 +410,40 @@ impl PithosServer {
     }
 
     #[tool(
+        name = "stage_get",
+        description = "Статус этапа: открытый или последний, входы, отчёты, черновики"
+    )]
+    pub async fn stage_get(
+        &self,
+        Parameters(args): Parameters<StageGetArgs>,
+    ) -> Result<Json<StageStatus>, ErrorData> {
+        self.service
+            .stage_get(args.project, args.task)
+            .await
+            .map(Json)
+            .map_err(Into::into)
+    }
+
+    #[tool(name = "stage_note", description = "Короткая заметка в открытом этапе")]
+    pub async fn stage_note(
+        &self,
+        Parameters(args): Parameters<StageNoteArgs>,
+    ) -> Result<Json<Stage>, ErrorData> {
+        self.service
+            .stage_note(StageNoteRequest {
+                project: args.project,
+                task: args.task,
+                role: args.role,
+                text: args.text,
+            })
+            .await
+            .map(Json)
+            .map_err(Into::into)
+    }
+
+    #[tool(
         name = "stage_finish",
-        description = "Закрывает этап, пишет главный отчёт и вердикт"
+        description = "Закрывает этап по опубликованному отчёту и вердикту"
     )]
     pub async fn stage_finish(
         &self,
@@ -345,7 +455,7 @@ impl PithosServer {
                 task: args.task,
                 role: args.role,
                 verdict: args.verdict,
-                report: args.report,
+                report_id: args.report_id,
                 kind: args.kind,
             })
             .await
@@ -384,7 +494,7 @@ impl PithosServer {
             .report_get(ReportGetRequest {
                 project: args.project,
                 task: args.task,
-                report: args.report,
+                report_id: args.report_id,
             })
             .await
             .map(Json)
@@ -410,6 +520,122 @@ impl PithosServer {
             })
             .await
             .map(Json)
+            .map_err(Into::into)
+    }
+
+    #[tool(
+        name = "report_open",
+        description = "Открывает черновик отчёта в открытом этапе"
+    )]
+    pub async fn report_open(
+        &self,
+        Parameters(args): Parameters<ReportOpenArgs>,
+    ) -> Result<Json<ReportDraft>, ErrorData> {
+        self.service
+            .report_open(ReportOpenRequest {
+                project: args.project,
+                task: args.task,
+                role: args.role,
+                kind: args.kind,
+                title: args.title,
+            })
+            .await
+            .map(Json)
+            .map_err(Into::into)
+    }
+
+    #[tool(
+        name = "report_section",
+        description = "Кладёт или переписывает раздел черновика"
+    )]
+    pub async fn report_section(
+        &self,
+        Parameters(args): Parameters<ReportSectionArgs>,
+    ) -> Result<Json<DraftRevision>, ErrorData> {
+        self.service
+            .report_section(ReportSectionRequest {
+                draft_id: args.draft_id,
+                role: args.role,
+                key: args.key,
+                title: args.title,
+                body: args.body,
+                order: args.order,
+                expected_revision: args.expected_revision,
+            })
+            .await
+            .map(Json)
+            .map_err(Into::into)
+    }
+
+    #[tool(
+        name = "report_append",
+        description = "Дописывает кусок в черновик без заголовка"
+    )]
+    pub async fn report_append(
+        &self,
+        Parameters(args): Parameters<ReportAppendArgs>,
+    ) -> Result<Json<DraftRevision>, ErrorData> {
+        self.service
+            .report_append(ReportAppendRequest {
+                draft_id: args.draft_id,
+                role: args.role,
+                text: args.text,
+                expected_revision: args.expected_revision,
+            })
+            .await
+            .map(Json)
+            .map_err(Into::into)
+    }
+
+    #[tool(
+        name = "report_draft",
+        description = "Читает черновик: разделы и собранный Markdown"
+    )]
+    pub async fn report_draft(
+        &self,
+        Parameters(args): Parameters<ReportDraftGetArgs>,
+    ) -> Result<Json<ReportDraftDocument>, ErrorData> {
+        self.service
+            .report_draft(args.draft_id)
+            .await
+            .map(Json)
+            .map_err(Into::into)
+    }
+
+    #[tool(
+        name = "report_publish",
+        description = "Публикует черновик и отдаёт report_id"
+    )]
+    pub async fn report_publish(
+        &self,
+        Parameters(args): Parameters<ReportPublishArgs>,
+    ) -> Result<Json<ReportPublished>, ErrorData> {
+        self.service
+            .report_publish(ReportPublishRequest {
+                draft_id: args.draft_id,
+                role: args.role,
+                expected_revision: args.expected_revision,
+            })
+            .await
+            .map(Json)
+            .map_err(Into::into)
+    }
+
+    #[tool(
+        name = "report_discard",
+        description = "Удаляет неопубликованный черновик"
+    )]
+    pub async fn report_discard(
+        &self,
+        Parameters(args): Parameters<ReportDiscardArgs>,
+    ) -> Result<Json<DiscardResponse>, ErrorData> {
+        self.service
+            .report_discard(ReportDiscardRequest {
+                draft_id: args.draft_id,
+                role: args.role,
+            })
+            .await
+            .map(|_| Json(DiscardResponse { discarded: true }))
             .map_err(Into::into)
     }
 
@@ -599,6 +825,7 @@ impl PithosServer {
                 task: args.task,
                 role: args.role,
                 path: args.path,
+                file_name: args.file_name,
                 title: args.title,
                 comment: args.comment,
                 kind: args.kind,
@@ -635,11 +862,13 @@ impl From<AppError> for ErrorData {
             | AppErrorCode::RoleMissing
             | AppErrorCode::TaskMissing
             | AppErrorCode::FieldMissing
+            | AppErrorCode::FieldInvalid
             | AppErrorCode::InputMissing
             | AppErrorCode::Conflict => McpErrorCode::INVALID_PARAMS,
             AppErrorCode::ProjectUnknown
             | AppErrorCode::RoleUnknown
             | AppErrorCode::TaskUnknown
+            | AppErrorCode::FileNotFound
             | AppErrorCode::NotFound => McpErrorCode::RESOURCE_NOT_FOUND,
             AppErrorCode::Io => McpErrorCode::INTERNAL_ERROR,
         };
@@ -654,7 +883,9 @@ pub fn mcp_service(
     StreamableHttpService::new(
         move || Ok(PithosServer::new(service.clone())),
         Default::default(),
-        StreamableHttpServerConfig::default().with_json_response(true),
+        StreamableHttpServerConfig::default()
+            .with_json_response(true)
+            .with_legacy_session_mode(false),
     )
 }
 

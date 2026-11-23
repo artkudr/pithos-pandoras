@@ -6,7 +6,7 @@ use crate::domain::Stage;
 use super::error::StoreError;
 
 const STAGE_COLUMNS: &str = "id, task_id, role, round, started_at, finished_at, \
-     end_reason, verdict, seconds, note";
+     end_reason, verdict, seconds, note, last_activity_at";
 
 fn map_stage(row: &rusqlite::Row<'_>) -> rusqlite::Result<Stage> {
     Ok(Stage {
@@ -20,6 +20,7 @@ fn map_stage(row: &rusqlite::Row<'_>) -> rusqlite::Result<Stage> {
         verdict: row.get(7)?,
         seconds: row.get(8)?,
         note: row.get(9)?,
+        last_activity_at: row.get(10)?,
     })
 }
 
@@ -52,8 +53,8 @@ pub fn insert_stage(
     conn.execute(
         "INSERT INTO stages
          (id, task_id, role, round, started_at, finished_at, end_reason,
-          verdict, seconds, note)
-         VALUES (?1, ?2, ?3, ?4, ?5, NULL, NULL, '', NULL, '')",
+          verdict, seconds, note, last_activity_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, NULL, NULL, '', NULL, '', ?5)",
         params![id, task_id, role, round, started_at],
     )?;
     get_stage(conn, &id)
@@ -64,6 +65,55 @@ pub fn get_stage(conn: &Connection, stage_id: &str) -> Result<Stage, StoreError>
     conn.query_row(&sql, [stage_id], map_stage)
         .optional()?
         .ok_or(StoreError::NotFound)
+}
+
+/// Отмечает, что в этапе была работа. Для признака жизни в карточке.
+pub fn touch_stage(conn: &Connection, stage_id: &str, at: &str) -> Result<(), StoreError> {
+    conn.execute(
+        "UPDATE stages SET last_activity_at = ?2 WHERE id = ?1",
+        params![stage_id, at],
+    )?;
+    Ok(())
+}
+
+/// Отмечает активность в открытом этапе задачи, если он есть.
+pub fn touch_open_stage(conn: &Connection, task_id: &str, at: &str) -> Result<(), StoreError> {
+    conn.execute(
+        "UPDATE stages SET last_activity_at = ?2
+         WHERE task_id = ?1 AND finished_at IS NULL",
+        params![task_id, at],
+    )?;
+    Ok(())
+}
+
+/// Последний этап задачи: открытый или завершённый.
+pub fn latest_stage(conn: &Connection, task_id: &str) -> Result<Option<Stage>, StoreError> {
+    let sql = format!(
+        "SELECT {STAGE_COLUMNS} FROM stages
+         WHERE task_id = ?1
+         ORDER BY started_at DESC, id DESC LIMIT 1"
+    );
+    Ok(conn.query_row(&sql, [task_id], map_stage).optional()?)
+}
+
+/// Дописывает заметку в этап и обновляет признак активности.
+pub fn append_note(
+    conn: &Connection,
+    stage_id: &str,
+    text: &str,
+    at: &str,
+) -> Result<Stage, StoreError> {
+    let current = get_stage(conn, stage_id)?;
+    let note = if current.note.trim().is_empty() {
+        text.to_string()
+    } else {
+        format!("{}\n{}", current.note.trim_end(), text)
+    };
+    conn.execute(
+        "UPDATE stages SET note = ?2, last_activity_at = ?3 WHERE id = ?1",
+        params![stage_id, note, at],
+    )?;
+    get_stage(conn, stage_id)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -79,7 +129,7 @@ pub fn finish_stage(
     conn.execute(
         "UPDATE stages
          SET finished_at = ?2, end_reason = ?3, verdict = ?4,
-             seconds = ?5, note = ?6
+             seconds = ?5, note = ?6, last_activity_at = ?2
          WHERE id = ?1 AND finished_at IS NULL",
         params![stage_id, finished_at, end_reason, verdict, seconds, note],
     )?;

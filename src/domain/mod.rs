@@ -16,8 +16,11 @@ pub use event::Event;
 pub use file::{FileAdded, FileRecord};
 pub use input::{InputRule, ProjectConfig};
 pub use project::{Project, ProjectView, Role, Status};
-pub use report::{Report, ReportPreview, RoleInput};
-pub use stage::{Stage, StageFinish, StageStart};
+pub use report::{
+    DraftBlock, DraftRevision, Report, ReportDraft, ReportDraftDocument, ReportDraftPreview,
+    ReportPreview, ReportPublished, RoleInput,
+};
+pub use stage::{Stage, StageFinish, StageStart, StageStatus};
 pub use task::{
     NextStep, RoleTime, StatusCount, Task, TaskCard, TaskCreated, TaskListItem, TaskStats,
 };

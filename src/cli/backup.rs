@@ -5,6 +5,8 @@ use std::path::{Path, PathBuf};
 use anyhow::Context;
 use clap::Args;
 use rusqlite::{Connection, OpenFlags};
+use time::macros::format_description;
+use time::OffsetDateTime;
 
 use crate::store::{self, Store};
 
@@ -98,7 +100,11 @@ fn default_dir(db: &Path) -> PathBuf {
 }
 
 fn unique_path(dir: &Path) -> PathBuf {
-    let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S").to_string();
+    let format = format_description!("[year][month][day]-[hour][minute][second]");
+    let stamp = OffsetDateTime::now_local()
+        .unwrap_or_else(|_| OffsetDateTime::now_utc())
+        .format(&format)
+        .unwrap_or_else(|_| String::from("backup"));
     let base = format!("pithos-pandoras-{stamp}");
     let mut path = dir.join(format!("{base}.db"));
     let mut index = 2;

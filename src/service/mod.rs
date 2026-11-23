@@ -1,5 +1,6 @@
 //! Сценарии приложения: проверки, writer, входы роли.
 
+pub mod drafts;
 pub mod inputs;
 
 use std::path::Path;
@@ -8,13 +9,14 @@ use std::sync::Arc;
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
+use crate::domain::report::preview;
 use crate::domain::{
-    AppError, Comment, Event, FileAdded, FileRecord, NextStep, Project, ProjectView, RoleInput,
-    RoleTime, StageFinish, StageStart, Status, StatusCount, Task, TaskCard, TaskCreated,
-    TaskListItem, TaskStats,
+    AppError, Comment, Event, FileAdded, FileRecord, NextStep, Project, ProjectView,
+    ReportDraftDocument, ReportDraftPreview, RoleInput, RoleTime, StageFinish, StageStart,
+    StageStatus, Status, StatusCount, Task, TaskCard, TaskCreated, TaskListItem, TaskStats,
 };
 use crate::store::{self, Store, StoreError};
-use store::{comments, db, events, files, projects, reports, stages, tasks};
+use store::{comments, db, drafts as draft_store, events, files, projects, reports, stages, tasks};
 
 pub const HUMAN_ACTOR: &str = "человек";
 
@@ -41,9 +43,11 @@ pub struct ProjectStatusCount {
 #[derive(Debug, Clone)]
 pub struct TaskPageData {
     pub task: Task,
+    pub folder_path: String,
     pub status: Option<Status>,
     pub current_stage: Option<crate::domain::Stage>,
     pub reports: Vec<TaskReport>,
+    pub drafts: Vec<ReportDraftDocument>,
     pub files: Vec<FileRecord>,
     pub comments: Vec<Comment>,
     pub events: Vec<Event>,
@@ -73,8 +77,16 @@ pub struct StageFinishRequest {
     pub task: Option<String>,
     pub role: Option<String>,
     pub verdict: Option<String>,
-    pub report: Option<String>,
+    pub report_id: Option<String>,
     pub kind: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct StageNoteRequest {
+    pub project: Option<String>,
+    pub task: Option<String>,
+    pub role: Option<String>,
+    pub text: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -91,7 +103,7 @@ pub struct ReportAddRequest {
 pub struct ReportGetRequest {
     pub project: Option<String>,
     pub task: Option<String>,
-    pub report: Option<String>,
+    pub report_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -102,6 +114,47 @@ pub struct ReportPutRequest {
     pub kind: Option<String>,
     pub title: Option<String>,
     pub content: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReportOpenRequest {
+    pub project: Option<String>,
+    pub task: Option<String>,
+    pub role: Option<String>,
+    pub kind: Option<String>,
+    pub title: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReportSectionRequest {
+    pub draft_id: Option<String>,
+    pub role: Option<String>,
+    pub key: Option<String>,
+    pub title: Option<String>,
+    pub body: Option<String>,
+    pub order: Option<i64>,
+    pub expected_revision: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReportAppendRequest {
+    pub draft_id: Option<String>,
+    pub role: Option<String>,
+    pub text: Option<String>,
+    pub expected_revision: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReportPublishRequest {
+    pub draft_id: Option<String>,
+    pub role: Option<String>,
+    pub expected_revision: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReportDiscardRequest {
+    pub draft_id: Option<String>,
+    pub role: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -168,6 +221,7 @@ pub struct FileAddRequest {
     pub task: Option<String>,
     pub role: Option<String>,
     pub path: Option<String>,
+    pub file_name: Option<String>,
     pub title: Option<String>,
     pub comment: Option<String>,
     pub kind: Option<String>,
@@ -460,7 +514,6 @@ impl Service {
         let date = db::local_date();
         let route = route.map(str::to_string);
         let resource = resource.map(str::to_string);
-        let create_folder = origin == "human";
         let origin = origin.to_string();
         let actor = actor.to_string();
         let title = title.to_string();
@@ -505,7 +558,7 @@ impl Service {
             .join(&project.tasks_dir)
             .join(&folder_name);
         let folder_existed = folder_path.exists();
-        if !folder_existed && create_folder {
+        if !folder_existed {
             std::fs::create_dir_all(&folder_path)
                 .map_err(|err| AppError::io(format!("создать папку задачи: {err}")))?;
         }
@@ -555,11 +608,13 @@ impl Service {
                     .cloned();
                 let current_stage = stages::open_stage(conn, &task.id)?;
                 let reports = reports::list_report_previews(conn, &task.id)?;
+                let drafts = load_draft_previews(conn, &task.id)?;
                 let files = files::list_files(conn, &task.id)?;
                 let mut warnings = Vec::new();
                 let folder_path = Path::new(&project.root_path)
                     .join(&project.tasks_dir)
                     .join(&task.folder_name);
+                let folder_path_string = folder_path.to_string_lossy().to_string();
                 if !folder_path.exists() {
                     warnings.push(String::from("folder_missing"));
                 }
@@ -570,9 +625,11 @@ impl Service {
                 }
                 Ok(TaskCard {
                     task,
+                    folder_path: folder_path_string,
                     status,
                     current_stage,
                     reports,
+                    drafts,
                     files,
                     warnings,
                 })
@@ -625,6 +682,7 @@ impl Service {
                     .into_iter()
                     .map(|(report, role)| TaskReport { report, role })
                     .collect();
+                let drafts = load_draft_documents(conn, &task.id)?;
                 let files = files::list_files(conn, &task.id)?;
                 let comments = comments::list_comments(conn, &task.id)?;
                 let events = events::list_events(conn, &task.id)?;
@@ -632,6 +690,7 @@ impl Service {
                 let folder_path = Path::new(&project.root_path)
                     .join(&project.tasks_dir)
                     .join(&task.folder_name);
+                let folder_path_string = folder_path.to_string_lossy().to_string();
                 if !folder_path.exists() {
                     warnings.push(String::from("folder_missing"));
                 }
@@ -642,9 +701,11 @@ impl Service {
                 }
                 Ok(TaskPageData {
                     task,
+                    folder_path: folder_path_string,
                     status,
                     current_stage,
                     reports,
+                    drafts,
                     files,
                     comments,
                     events,
@@ -687,8 +748,21 @@ impl Service {
             })
             .await?;
 
-        if open.is_some() {
-            return Err(AppError::conflict("этап уже открыт, сначала закрой его"));
+        if let Some(open) = open {
+            if open.role == role_owned {
+                let inputs = self
+                    .resolve_inputs(&project, &task_id, &role_owned, open.round)
+                    .await?;
+                return Ok(StageStart {
+                    stage: open,
+                    inputs,
+                    resumed: true,
+                });
+            }
+            return Err(
+                AppError::conflict(format!("этап уже открыт ролью `{}`", open.role))
+                    .with_hint("Закройте этап этой роли или работайте в её рамках."),
+            );
         }
 
         let inputs = self
@@ -739,93 +813,311 @@ impl Service {
             Err(StoreError::Sqlite(rusqlite::Error::SqliteFailure(ffi_err, _)))
                 if ffi_err.code == rusqlite::ErrorCode::ConstraintViolation =>
             {
-                return Err(AppError::conflict("этап уже открыт, сначала закрой его"));
+                let open = self
+                    .store
+                    .read({
+                        let task_id = task_id.clone();
+                        move |conn| stages::open_stage(conn, &task_id)
+                    })
+                    .await?;
+                let Some(open) = open else {
+                    return Err(AppError::conflict("этап уже открыт, повторите stage_start"));
+                };
+                if open.role != role_owned {
+                    return Err(AppError::conflict(format!(
+                        "этап уже открыт ролью `{}`",
+                        open.role
+                    ))
+                    .with_hint("Закройте этап этой роли или работайте в её рамках."));
+                }
+                let inputs = self
+                    .resolve_inputs(&project, &task_id, &role_owned, open.round)
+                    .await?;
+                return Ok(StageStart {
+                    stage: open,
+                    inputs,
+                    resumed: true,
+                });
             }
             Err(err) => return Err(err.into()),
         };
 
-        Ok(StageStart { stage, inputs })
+        Ok(StageStart {
+            stage,
+            inputs,
+            resumed: false,
+        })
+    }
+
+    pub async fn stage_get(
+        &self,
+        project: Option<String>,
+        task: Option<String>,
+    ) -> Result<StageStatus, AppError> {
+        let project_name = require_project(project.as_deref())?.to_string();
+        let task_ref = require_task(task.as_deref())?.to_string();
+        let view = self.project_view(&project_name).await?;
+        let project = view.project.clone();
+        let task = self.task(&project, &task_ref).await?;
+        let task_id = task.id.clone();
+
+        let (open, latest, all_reports, all_drafts) = self
+            .store
+            .read({
+                let task_id = task_id.clone();
+                move |conn| {
+                    let open = stages::open_stage(conn, &task_id)?;
+                    let latest = stages::latest_stage(conn, &task_id)?;
+                    let reports = reports::list_report_previews(conn, &task_id)?;
+                    let drafts = load_draft_previews(conn, &task_id)?;
+                    Ok((open, latest, reports, drafts))
+                }
+            })
+            .await?;
+
+        let is_open = open.is_some();
+        let stage = open.or(latest);
+
+        let (inputs, reports, drafts) = match &stage {
+            Some(stage) => {
+                let inputs = if is_open {
+                    self.resolve_inputs(&project, &task_id, &stage.role, stage.round)
+                        .await?
+                } else {
+                    Vec::new()
+                };
+                let reports = all_reports
+                    .into_iter()
+                    .filter(|report| report.stage_id.as_deref() == Some(stage.id.as_str()))
+                    .collect();
+                let drafts = all_drafts
+                    .into_iter()
+                    .filter(|draft| draft.stage_id == stage.id)
+                    .collect();
+                (inputs, reports, drafts)
+            }
+            None => (Vec::new(), Vec::new(), Vec::new()),
+        };
+
+        Ok(StageStatus {
+            stage,
+            is_open,
+            inputs,
+            reports,
+            drafts,
+        })
+    }
+
+    pub async fn stage_note(
+        &self,
+        req: StageNoteRequest,
+    ) -> Result<crate::domain::Stage, AppError> {
+        let project_name = require_project(req.project.as_deref())?.to_string();
+        let task_ref = require_task(req.task.as_deref())?.to_string();
+        let text = require_field(req.text.as_deref(), "text")?.to_string();
+
+        let view = self.project_view(&project_name).await?;
+        let project = view.project.clone();
+        let task = self.task(&project, &task_ref).await?;
+        let task_id = task.id.clone();
+
+        let role = match req
+            .role
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            Some(role) => role.to_string(),
+            None => {
+                let open = self
+                    .store
+                    .read({
+                        let task_id = task_id.clone();
+                        move |conn| stages::open_stage(conn, &task_id)
+                    })
+                    .await?;
+                let Some(open) = open else {
+                    return Err(role_missing_with(&view.roles));
+                };
+                open.role
+            }
+        };
+        ensure_role(&view.roles, &role)?;
+
+        let now = db::now_rfc3339();
+        let note = format!("{} {}", db::local_datetime(), text);
+        let task_id_for_write = task_id.clone();
+        let role_for_write = role.clone();
+        let origin = event_origin(&role);
+
+        let stage = self
+            .store
+            .write(move |conn| {
+                let tx = conn.transaction()?;
+                let open = stages::open_stage(&tx, &task_id_for_write)?;
+                let Some(stage) = open else {
+                    return Err(StoreError::Conflict("нет открытого этапа".to_string()));
+                };
+                if role_for_write != HUMAN_ACTOR && stage.role != role_for_write {
+                    return Err(StoreError::Conflict(format!(
+                        "этап открыт ролью `{}`",
+                        stage.role
+                    )));
+                }
+                let stage = stages::append_note(&tx, &stage.id, &note, &now)?;
+                let payload = serde_json::json!({"text": &note}).to_string();
+                events::insert_event(
+                    &tx,
+                    &task_id_for_write,
+                    "stage_noted",
+                    Some(&stage.id),
+                    Some(&role_for_write),
+                    &payload,
+                    origin,
+                )?;
+                tx.commit()?;
+                Ok(stage)
+            })
+            .await?;
+
+        Ok(stage)
     }
 
     pub async fn stage_finish(&self, req: StageFinishRequest) -> Result<StageFinish, AppError> {
         let project_name = require_project(req.project.as_deref())?.to_string();
         let task_ref = require_task(req.task.as_deref())?.to_string();
-        let role = require_role(req.role.as_deref())?.to_string();
         let verdict = require_field(req.verdict.as_deref(), "verdict")?.to_string();
-        let report = require_field(req.report.as_deref(), "report")?.to_string();
-        let kind = req.kind.unwrap_or_else(|| String::from("report"));
-        validate_kind(&kind, STAGE_KINDS)?;
+
+        let kind_arg = req
+            .kind
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string);
+        if let Some(kind) = &kind_arg {
+            validate_kind(kind, STAGE_KINDS)?;
+        }
+
+        let report_id = req
+            .report_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                AppError::field_invalid(
+                    "report_id",
+                    "Нужен `report_id` опубликованного черновика. Сначала `report_publish`.",
+                )
+            })?
+            .to_string();
 
         let view = self.project_view(&project_name).await?;
-        ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
         let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
-        let role_owned = role.clone();
 
-        let open = self
-            .store
-            .read({
-                let task_id = task_id.clone();
-                move |conn| stages::open_stage(conn, &task_id)
-            })
-            .await?;
-        let Some(stage) = open else {
-            return Err(AppError::conflict("нет открытого этапа"));
+        let role = match req
+            .role
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            Some(role) => role.to_string(),
+            None => {
+                let open = self
+                    .store
+                    .read({
+                        let task_id = task_id.clone();
+                        move |conn| stages::open_stage(conn, &task_id)
+                    })
+                    .await?;
+                let Some(open) = open else {
+                    return Err(role_missing_with(&view.roles));
+                };
+                open.role
+            }
         };
-        if stage.role != role_owned {
-            return Err(AppError::conflict("открыт этап другой роли"));
-        }
+        ensure_role(&view.roles, &role)?;
 
         let now = db::now_rfc3339();
-        let seconds = compute_seconds(&stage.started_at, &now);
-        let stage_id = stage.id.clone();
-        let title = format!("Отчёт: {role_owned}");
         let task_id_for_write = task_id.clone();
-        let kind_for_write = kind.clone();
-        let title_for_write = title.clone();
-        let report_for_write = report.clone();
+        let role_for_write = role.clone();
         let verdict_for_write = verdict.clone();
-        let role_for_write = role_owned.clone();
+        let kind_for_write = kind_arg.clone();
+        let report_id_for_write = report_id.clone();
 
         let result = self
             .store
             .write(move |conn| {
                 let tx = conn.transaction()?;
-                let report = reports::insert_report(
-                    &tx,
-                    &task_id_for_write,
-                    Some(&stage_id),
-                    None,
-                    &kind_for_write,
-                    &title_for_write,
-                    &report_for_write,
-                    &now,
-                )?;
+                let open = stages::open_stage(&tx, &task_id_for_write)?;
+                let Some(stage) = open else {
+                    return Err(StoreError::Conflict("нет открытого этапа".to_string()));
+                };
+                if stage.role != role_for_write {
+                    return Err(StoreError::Conflict(format!(
+                        "этап открыт ролью `{}`",
+                        stage.role
+                    )));
+                }
+                let seconds = compute_seconds(&stage.started_at, &now);
+
+                let report = match reports::get_report(&tx, &report_id_for_write) {
+                    Ok(report) => report,
+                    Err(StoreError::NotFound) => {
+                        return Err(StoreError::from(AppError::not_found("Отчёт не найден")))
+                    }
+                    Err(err) => return Err(err),
+                };
+                if report.task_id != task_id_for_write {
+                    return Err(StoreError::from(AppError::not_found(
+                        "Отчёт не принадлежит задаче",
+                    )));
+                }
+                if report.stage_id.as_deref() != Some(stage.id.as_str()) {
+                    return Err(StoreError::Conflict(
+                        "отчёт опубликован в другом этапе".to_string(),
+                    ));
+                }
+                if let Some(kind) = &kind_for_write {
+                    if kind != &report.kind {
+                        return Err(StoreError::from(AppError::field_invalid(
+                            "kind",
+                            format!(
+                                "Опубликованный отчёт имеет вид `{}`, а передан `{kind}`.",
+                                report.kind
+                            ),
+                        )));
+                    }
+                }
+
                 let stage = stages::finish_stage(
                     &tx,
-                    &stage_id,
+                    &stage.id,
                     &now,
                     "finished",
                     &verdict_for_write,
                     seconds,
                     "",
                 )?;
-                let payload =
-                    serde_json::json!({"verdict": &verdict_for_write, "kind": &kind_for_write})
-                        .to_string();
+                let payload = serde_json::json!({
+                    "verdict": &verdict_for_write,
+                    "kind": &report.kind,
+                    "report_id": &report.report_id,
+                })
+                .to_string();
                 events::insert_event(
                     &tx,
                     &task_id_for_write,
                     "stage_finished",
-                    Some(&stage_id),
+                    Some(&stage.id),
                     Some(&role_for_write),
                     &payload,
                     "agent",
                 )?;
                 if is_return_verdict(&verdict_for_write) {
                     let payload = serde_json::json!({
-                        "report_id": &report.id,
+                        "report_id": &report.report_id,
                         "kind": &report.kind,
                         "verdict": &verdict_for_write,
                     })
@@ -834,7 +1126,7 @@ impl Service {
                         &tx,
                         &task_id_for_write,
                         "stage_returned",
-                        Some(&stage_id),
+                        Some(&stage.id),
                         Some(&role_for_write),
                         &payload,
                         "agent",
@@ -920,14 +1212,12 @@ impl Service {
     ) -> Result<crate::domain::Report, AppError> {
         let project_name = require_project(req.project.as_deref())?.to_string();
         let task_ref = require_task(req.task.as_deref())?.to_string();
-        let role = require_role(req.role.as_deref())?.to_string();
         let kind = require_field(req.kind.as_deref(), "kind")?.to_string();
         validate_kind(&kind, STAGE_KINDS)?;
         let title = require_field(req.title.as_deref(), "title")?.to_string();
         let content = require_field(req.content.as_deref(), "content")?.to_string();
 
         let view = self.project_view(&project_name).await?;
-        ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
         let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
@@ -942,8 +1232,22 @@ impl Service {
         let Some(stage) = open else {
             return Err(AppError::conflict("нет открытого этапа"));
         };
+
+        let role = match req
+            .role
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            Some(role) => role.to_string(),
+            None => stage.role.clone(),
+        };
+        ensure_role(&view.roles, &role)?;
         if stage.role != role {
-            return Err(AppError::conflict("открыт этап другой роли"));
+            return Err(AppError::conflict(format!(
+                "этап открыт ролью `{}`",
+                stage.role
+            )));
         }
 
         let stage_id = stage.id.clone();
@@ -1001,24 +1305,66 @@ impl Service {
     ) -> Result<crate::domain::Report, AppError> {
         let project_name = require_project(req.project.as_deref())?.to_string();
         let task_ref = require_task(req.task.as_deref())?.to_string();
-        let report_id = require_field(req.report.as_deref(), "report")?.to_string();
+        let report_ref = req
+            .report_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string);
 
         let view = self.project_view(&project_name).await?;
         let project = view.project.clone();
         let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
 
+        let Some(report_ref) = report_ref else {
+            let allowed = self.report_allowed(&task_id).await?;
+            return Err(AppError::field_missing("report_id")
+                .with_hint("Возьмите `report_id` из `task_get.reports[]`.")
+                .with_allowed(allowed));
+        };
+
         let report = self
             .store
-            .read(move |conn| reports::get_report(conn, &report_id))
+            .read(move |conn| reports::get_report(conn, &report_ref))
             .await;
 
         match report {
             Ok(report) if report.task_id == task_id => Ok(report),
-            Ok(_) => Err(AppError::not_found("Отчёт не принадлежит задаче")),
-            Err(StoreError::NotFound) => Err(AppError::not_found("Отчёт не найден")),
+            Ok(_) => {
+                let allowed = self.report_allowed(&task_id).await?;
+                Err(AppError::not_found("Отчёт не принадлежит задаче")
+                    .with_hint("Возьмите `report_id` из `task_get.reports[]`.")
+                    .with_allowed(allowed))
+            }
+            Err(StoreError::NotFound) => {
+                let allowed = self.report_allowed(&task_id).await?;
+                Err(AppError::not_found("Отчёт не найден")
+                    .with_hint("Возьмите `report_id` из `task_get.reports[]`.")
+                    .with_allowed(allowed))
+            }
             Err(err) => Err(err.into()),
         }
+    }
+
+    async fn report_allowed(&self, task_id: &str) -> Result<Vec<String>, AppError> {
+        let task_id = task_id.to_string();
+        let previews = self
+            .store
+            .read(move |conn| reports::list_report_previews(conn, &task_id))
+            .await?;
+        Ok(previews
+            .iter()
+            .map(|preview| {
+                format!(
+                    "{} — {} (круг {}): {}",
+                    preview.report_id,
+                    preview.kind,
+                    preview.round.unwrap_or(0),
+                    preview.title
+                )
+            })
+            .collect())
     }
 
     pub async fn task_close(&self, req: TaskCloseRequest) -> Result<Task, AppError> {
@@ -1108,9 +1454,10 @@ impl Service {
             .as_ref()
             .and_then(|stage| compute_seconds(&stage.started_at, &now));
         let open_id = open.as_ref().map(|stage| stage.id.clone());
+        let stage_closed = open_id.is_some();
         let origin = event_origin(&role);
 
-        let task = self
+        let mut task = self
             .store
             .write(move |conn| {
                 let tx = conn.transaction()?;
@@ -1139,6 +1486,7 @@ impl Service {
             })
             .await?;
 
+        task.stage_closed = Some(stage_closed);
         Ok(task)
     }
 
@@ -1246,6 +1594,7 @@ impl Service {
                     &payload,
                     origin,
                 )?;
+                stages::touch_open_stage(&tx, &task_id, &now)?;
                 tx.commit()?;
                 Ok(comment)
             })
@@ -1579,28 +1928,113 @@ impl Service {
     pub async fn file_add(&self, req: FileAddRequest) -> Result<FileAdded, AppError> {
         let project_name = require_project(req.project.as_deref())?.to_string();
         let task_ref = require_task(req.task.as_deref())?.to_string();
-        let role = require_role(req.role.as_deref())?.to_string();
-        let path = require_field(req.path.as_deref(), "path")?.to_string();
-        let title = require_field(req.title.as_deref(), "title")?.to_string();
+        let path_arg = req
+            .path
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string);
+        let file_name = req
+            .file_name
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string);
+        if path_arg.is_some() && file_name.is_some() {
+            return Err(AppError::field_invalid(
+                "path",
+                "Укажите либо `path`, либо `file_name`, но не оба сразу.",
+            ));
+        }
+        if path_arg.is_none() && file_name.is_none() {
+            return Err(AppError::field_invalid(
+                "path",
+                "Нужен `path` (путь от корня проекта) или `file_name` (имя файла в папке задачи).",
+            ));
+        }
+        let title = req
+            .title
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+            .or_else(|| file_name.clone())
+            .ok_or_else(|| AppError::field_missing("title"))?;
         let kind = req.kind.unwrap_or_else(|| String::from("file"));
         let comment = req.comment.unwrap_or_default().trim().to_string();
 
         let view = self.project_view(&project_name).await?;
-        ensure_role(&view.roles, &role)?;
         let project = view.project.clone();
         let task = self.task(&project, &task_ref).await?;
         let task_id = task.id.clone();
 
+        let role = match req
+            .role
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            Some(role) => role.to_string(),
+            None => {
+                let open = self
+                    .store
+                    .read({
+                        let task_id = task_id.clone();
+                        move |conn| stages::open_stage(conn, &task_id)
+                    })
+                    .await?;
+                let Some(open) = open else {
+                    return Err(role_missing_with(&view.roles));
+                };
+                open.role
+            }
+        };
+        ensure_role(&view.roles, &role)?;
+
         let root = std::fs::canonicalize(&project.root_path)
             .map_err(|err| AppError::io(format!("корень проекта: {err}")))?;
-        let canonical = std::fs::canonicalize(&path)
-            .map_err(|err| AppError::io(format!("файл `{path}`: {err}")))?;
+        let task_folder = root.join(&project.tasks_dir).join(&task.folder_name);
+
+        let (display_path, requested) = if let Some(name) = &file_name {
+            validate_file_name(name)?;
+            (name.clone(), task_folder.join(name))
+        } else {
+            let path = path_arg.clone().unwrap_or_default();
+            let requested = if Path::new(&path).is_absolute() {
+                Path::new(&path).to_path_buf()
+            } else {
+                root.join(&path)
+            };
+            (path, requested)
+        };
+
+        let tried = vec![requested.to_string_lossy().to_string()];
+        let canonical = match std::fs::canonicalize(&requested) {
+            Ok(path) => path,
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                return Err(AppError::file_not_found(&display_path, tried));
+            }
+            Err(err) => {
+                return Err(AppError::io(format!(
+                    "файл `{}`: {err}",
+                    requested.display()
+                )));
+            }
+        };
         if !canonical.starts_with(&root) {
-            return Err(AppError::conflict("путь файла выходит за корень проекта"));
+            return Err(AppError::conflict("путь файла выходит за корень проекта")
+                .with_path(display_path)
+                .with_tried(tried));
         }
-        let size = std::fs::metadata(&canonical)
-            .ok()
-            .map(|meta| meta.len() as i64);
+        let metadata = std::fs::metadata(&canonical)
+            .map_err(|err| AppError::io(format!("файл `{}`: {err}", canonical.display())))?;
+        if !metadata.is_file() {
+            return Err(AppError::field_invalid(
+                "path",
+                "Путь ведёт в папку, а не в файл.",
+            ));
+        }
+        let size = Some(metadata.len() as i64);
         let path_string = canonical.to_string_lossy().to_string();
         let now = db::now_rfc3339();
         let role_for_write = role.clone();
@@ -1641,6 +2075,7 @@ impl Service {
                     &payload,
                     "agent",
                 )?;
+                stages::touch_open_stage(&tx, &task_id, &now)?;
                 tx.commit()?;
                 Ok(file)
             })
@@ -1888,6 +2323,56 @@ impl Service {
 const STAGE_KINDS: &[&str] = &["report", "plan", "acceptance", "guide"];
 const TASK_KINDS: &[&str] = &["report", "plan", "acceptance", "guide", "research", "note"];
 
+fn load_draft_previews(
+    conn: &rusqlite::Connection,
+    task_id: &str,
+) -> Result<Vec<ReportDraftPreview>, StoreError> {
+    let now = db::now_rfc3339();
+    let open = draft_store::list_open_drafts(conn, task_id)?;
+    let mut out = Vec::new();
+    for draft in open {
+        if drafts::is_expired(&draft.created_at, &now) {
+            continue;
+        }
+        let blocks = draft_store::list_blocks(conn, &draft.draft_id)?;
+        let rendered = drafts::render_draft(&blocks);
+        out.push(ReportDraftPreview {
+            draft_id: draft.draft_id,
+            task_id: draft.task_id,
+            stage_id: draft.stage_id,
+            actor: draft.actor,
+            kind: draft.kind,
+            title: draft.title,
+            revision: draft.revision,
+            preview: preview(&rendered),
+            updated_at: draft.updated_at,
+        });
+    }
+    Ok(out)
+}
+
+fn load_draft_documents(
+    conn: &rusqlite::Connection,
+    task_id: &str,
+) -> Result<Vec<ReportDraftDocument>, StoreError> {
+    let now = db::now_rfc3339();
+    let open = draft_store::list_open_drafts(conn, task_id)?;
+    let mut out = Vec::new();
+    for draft in open {
+        if drafts::is_expired(&draft.created_at, &now) {
+            continue;
+        }
+        let blocks = draft_store::list_blocks(conn, &draft.draft_id)?;
+        let rendered = drafts::render_draft(&blocks);
+        out.push(ReportDraftDocument {
+            draft,
+            blocks,
+            rendered,
+        });
+    }
+    Ok(out)
+}
+
 fn validate_kind(kind: &str, allowed: &[&str]) -> Result<(), AppError> {
     if allowed.contains(&kind) {
         Ok(())
@@ -1950,6 +2435,16 @@ fn require_field<'a>(value: Option<&'a str>, field: &str) -> Result<&'a str, App
     }
 }
 
+fn validate_file_name(name: &str) -> Result<(), AppError> {
+    if name == "." || name == ".." || name.contains(['/', '\\', ':']) {
+        return Err(AppError::field_invalid(
+            "file_name",
+            "Имя файла — только имя без папок: `снимок.png`, а не `Проверки/снимок.png`.",
+        ));
+    }
+    Ok(())
+}
+
 fn ensure_role(roles: &[crate::domain::Role], role: &str) -> Result<(), AppError> {
     if role == HUMAN_ACTOR || roles.iter().any(|item| item.name == role) {
         Ok(())
@@ -1959,6 +2454,10 @@ fn ensure_role(roles: &[crate::domain::Role], role: &str) -> Result<(), AppError
             roles.iter().map(|item| item.name.clone()).collect(),
         ))
     }
+}
+
+fn role_missing_with(roles: &[crate::domain::Role]) -> AppError {
+    AppError::role_missing().with_allowed(roles.iter().map(|item| item.name.clone()).collect())
 }
 
 fn compute_seconds(started_at: &str, finished_at: &str) -> Option<i64> {

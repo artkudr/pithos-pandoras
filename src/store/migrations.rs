@@ -8,6 +8,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (2, include_str!("../../migrations/0002_fts.sql")),
     (3, include_str!("../../migrations/0003_projects.sql")),
     (4, include_str!("../../migrations/0004_file_comment.sql")),
+    (5, include_str!("../../migrations/0005_report_drafts.sql")),
 ];
 
 pub fn migrate(conn: &mut Connection) -> Result<(), StoreError> {

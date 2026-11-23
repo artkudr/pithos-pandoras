@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::Serialize;
 
-use crate::domain::{FileRecord, ReportPreview, Stage, Status};
+use crate::domain::{FileRecord, ReportDraftPreview, ReportPreview, Stage, Status};
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]
 pub struct Task {
@@ -22,6 +22,9 @@ pub struct Task {
     pub updated_at: String,
     pub closed_at: Option<String>,
     pub origin: String,
+    /// Только в ответе `task_block`: был ли закрыт открытый этап.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stage_closed: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]
@@ -49,9 +52,12 @@ pub struct TaskListItem {
 #[derive(Debug, Clone, Serialize, JsonSchema)]
 pub struct TaskCard {
     pub task: Task,
+    /// Полный путь к папке задачи: `root_path + tasks_dir + folder_name`.
+    pub folder_path: String,
     pub status: Option<Status>,
     pub current_stage: Option<Stage>,
     pub reports: Vec<ReportPreview>,
+    pub drafts: Vec<ReportDraftPreview>,
     pub files: Vec<FileRecord>,
     pub warnings: Vec<String>,
 }

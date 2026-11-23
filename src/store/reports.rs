@@ -12,7 +12,7 @@ const REPORT_COLUMNS_R: &str =
 
 fn map_report(row: &rusqlite::Row<'_>) -> rusqlite::Result<Report> {
     Ok(Report {
-        id: row.get(0)?,
+        report_id: row.get(0)?,
         task_id: row.get(1)?,
         stage_id: row.get(2)?,
         actor: row.get(3)?,
@@ -56,19 +56,23 @@ pub fn list_report_previews(
     task_id: &str,
 ) -> Result<Vec<ReportPreview>, StoreError> {
     let mut stmt = conn.prepare(
-        "SELECT id, task_id, stage_id, actor, kind, title, content, created_at
-         FROM reports WHERE task_id = ?1
-         ORDER BY created_at, id",
+        "SELECT r.id, r.task_id, r.stage_id, r.actor, r.kind, r.title, r.content, r.created_at,
+                s.round
+         FROM reports r
+         LEFT JOIN stages s ON s.id = r.stage_id
+         WHERE r.task_id = ?1
+         ORDER BY r.created_at, r.id",
     )?;
     let rows = stmt.query_map([task_id], |row| {
         let content: String = row.get(6)?;
         Ok(ReportPreview {
-            id: row.get(0)?,
+            report_id: row.get(0)?,
             task_id: row.get(1)?,
             stage_id: row.get(2)?,
             actor: row.get(3)?,
             kind: row.get(4)?,
             title: row.get(5)?,
+            round: row.get(8)?,
             preview: preview(&content),
             created_at: row.get(7)?,
         })
@@ -94,7 +98,7 @@ pub fn list_reports_with_role(
     )?;
     let rows = stmt.query_map([task_id], |row| {
         let report = Report {
-            id: row.get(0)?,
+            report_id: row.get(0)?,
             task_id: row.get(1)?,
             stage_id: row.get(2)?,
             actor: row.get(3)?,
@@ -193,7 +197,7 @@ pub fn find_report_for_rule(
     };
     let stage_round: i64 = row.get(0)?;
     let report = Report {
-        id: row.get(1)?,
+        report_id: row.get(1)?,
         task_id: row.get(2)?,
         stage_id: row.get(3)?,
         actor: row.get(4)?,

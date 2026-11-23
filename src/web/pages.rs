@@ -10,6 +10,9 @@ use axum::routing::{get, post};
 use axum::{Form, Json};
 use rust_embed::RustEmbed;
 use serde::Deserialize;
+use time::format_description::well_known::Rfc3339;
+use time::macros::format_description;
+use time::OffsetDateTime;
 
 use crate::domain::{AppError, ErrorCode, TaskListItem};
 use crate::service::{
@@ -182,7 +185,7 @@ async fn task_page(
             status_id,
             status_kind,
             status_color,
-            folder_name: data.task.folder_name,
+            folder_path: data.folder_path,
             created_at: format_local_time(&data.task.created_at),
             updated_at: format_local_time(&data.task.updated_at),
         },
@@ -193,6 +196,11 @@ async fn task_page(
             role: stage.role,
             round: stage.round,
             started_at: format_local_time(&stage.started_at),
+            last_activity_at: stage
+                .last_activity_at
+                .map(|value| format_local_time(&value))
+                .unwrap_or_default(),
+            note: stage.note,
         }),
         reports: data
             .reports
@@ -204,6 +212,21 @@ async fn task_page(
                 role: item.role,
                 created_at: format_local_time(&item.report.created_at),
                 html: render_markdown(&item.report.content),
+            })
+            .collect(),
+        drafts: data
+            .drafts
+            .into_iter()
+            .map(|document| {
+                let draft = document.draft;
+                DraftView {
+                    label: report_kind_label(&draft.kind).to_string(),
+                    role_color: role_colors.get(&draft.actor).cloned().unwrap_or_default(),
+                    title: draft.title,
+                    role: draft.actor,
+                    updated_at: format_local_time(&draft.updated_at),
+                    html: render_markdown(&document.rendered),
+                }
             })
             .collect(),
         files: data
@@ -361,6 +384,7 @@ async fn upload_file(
             task: Some(number.to_string()),
             role: Some(String::from(HUMAN_ACTOR)),
             path: Some(path.to_string_lossy().to_string()),
+            file_name: None,
             title: Some(title),
             comment: Some(comment.trim().to_string()),
             kind: Some(kind),
@@ -942,13 +966,15 @@ fn format_size(size: i64) -> String {
 }
 
 fn format_local_time(value: &str) -> String {
-    match chrono::DateTime::parse_from_rfc3339(value) {
-        Ok(parsed) => parsed
-            .with_timezone(&chrono::Local)
-            .format("%Y-%m-%d %H:%M:%S")
-            .to_string(),
-        Err(_) => value.to_string(),
-    }
+    let Ok(parsed) = OffsetDateTime::parse(value, &Rfc3339) else {
+        return value.to_string();
+    };
+    let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC);
+    let format = format_description!("[year]-[month]-[day] [hour]:[minute]:[second]");
+    parsed
+        .to_offset(offset)
+        .format(&format)
+        .unwrap_or_else(|_| value.to_string())
 }
 
 fn format_duration(seconds: i64) -> String {
@@ -975,7 +1001,11 @@ fn event_label(kind: &str) -> String {
         "stage_started" => "Этап начат",
         "stage_finished" => "Этап завершён",
         "stage_returned" => "Этап возвращён",
+        "stage_noted" => "Заметка в этапе",
         "report_added" => "Отчёт добавлен",
+        "report_draft_opened" => "Черновик открыт",
+        "report_published" => "Отчёт опубликован",
+        "report_draft_discarded" => "Черновик удалён",
         "file_added" => "Файл добавлен",
         "file_updated" => "Файл изменён",
         "file_removed" => "Файл удалён",
@@ -1161,6 +1191,7 @@ struct TaskTemplate {
     folder_missing: bool,
     current_stage: Option<StageView>,
     reports: Vec<ReportView>,
+    drafts: Vec<DraftView>,
     files: Vec<FileView>,
     comments: Vec<CommentView>,
     events: Vec<EventView>,
@@ -1273,7 +1304,7 @@ struct TaskView {
     status_id: String,
     status_kind: String,
     status_color: String,
-    folder_name: String,
+    folder_path: String,
     created_at: String,
     updated_at: String,
 }
@@ -1283,6 +1314,8 @@ struct StageView {
     role_color: String,
     round: i64,
     started_at: String,
+    last_activity_at: String,
+    note: String,
 }
 
 struct ReportView {
@@ -1291,6 +1324,15 @@ struct ReportView {
     role: String,
     role_color: String,
     created_at: String,
+    html: String,
+}
+
+struct DraftView {
+    label: String,
+    title: String,
+    role: String,
+    role_color: String,
+    updated_at: String,
     html: String,
 }
 
@@ -1363,10 +1405,12 @@ impl From<AppError> for WebError {
             | ErrorCode::RoleMissing
             | ErrorCode::TaskMissing
             | ErrorCode::FieldMissing
+            | ErrorCode::FieldInvalid
             | ErrorCode::InputMissing => StatusCode::BAD_REQUEST,
             ErrorCode::ProjectUnknown
             | ErrorCode::RoleUnknown
             | ErrorCode::TaskUnknown
+            | ErrorCode::FileNotFound
             | ErrorCode::NotFound => StatusCode::NOT_FOUND,
             ErrorCode::Conflict => StatusCode::CONFLICT,
             ErrorCode::Io => StatusCode::INTERNAL_SERVER_ERROR,

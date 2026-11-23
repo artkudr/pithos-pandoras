@@ -44,7 +44,9 @@ fn test_db() -> (TempDir, Connection) {
 - Пропал план последнего круга — `input_missing`, без отката.
 - Одновременное создание задач — разные номера.
 - Две задачи параллельно — обе идут, номера разные.
-- Два `stage_start` в одной задаче — один успех, второй `conflict`.
+- Два `stage_start` одной ролью — тот же этап и `resumed: true`, без `conflict`.
+- Две разные роли в одной задаче — вторая получает `conflict` с именем
+  владельца.
 - Два `report_add` к одной задаче — оба видны, конфликта нет.
 - Отчёт в базе, файл по ссылке, картинка в нужном абзаце.
 - Чужой файл в ссылке — ошибка.
@@ -59,7 +61,7 @@ fn test_db() -> (TempDir, Connection) {
 
 ## Имена
 
-`test_<что>_<условие>`: `test_stage_start_second_returns_conflict`,
+`test_<что>_<условие>`: `test_stage_start_second_returns_resumed`,
 `test_task_create_parallel_numbers_are_unique`.
 
 ## Гейты перед сдачей

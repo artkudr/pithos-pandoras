@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use rusqlite::Connection;
 use time::format_description::well_known::Rfc3339;
+use time::macros::format_description;
 use time::OffsetDateTime;
 
 use super::error::StoreError;
@@ -27,7 +28,20 @@ pub fn format_rfc3339(value: OffsetDateTime) -> String {
 }
 
 pub fn local_date() -> String {
-    chrono::Local::now().format("%Y-%m-%d").to_string()
+    let format = format_description!("[year]-[month]-[day]");
+    OffsetDateTime::now_local()
+        .unwrap_or_else(|_| OffsetDateTime::now_utc())
+        .format(&format)
+        .unwrap_or_else(|_| String::from("1970-01-01"))
+}
+
+/// Местное время для заметок в этапе: без пояса, как на странице.
+pub fn local_datetime() -> String {
+    let format = format_description!("[year]-[month]-[day] [hour]:[minute]");
+    OffsetDateTime::now_local()
+        .unwrap_or_else(|_| OffsetDateTime::now_utc())
+        .format(&format)
+        .unwrap_or_else(|_| String::from("1970-01-01 00:00"))
 }
 
 pub fn folder_name(pattern: &str, number: i64, date: &str) -> String {

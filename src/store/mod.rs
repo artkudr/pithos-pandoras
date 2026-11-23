@@ -2,6 +2,7 @@
 
 pub mod comments;
 pub mod db;
+pub mod drafts;
 pub mod error;
 pub mod events;
 pub mod files;

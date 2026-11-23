@@ -30,7 +30,7 @@ pub fn resolve(
                 role: rule.from,
                 round,
                 kind: report.kind,
-                report_id: report.id,
+                report_id: report.report_id,
                 title: report.title,
                 preview: preview(&report.content),
             }),

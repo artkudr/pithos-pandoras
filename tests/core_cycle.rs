@@ -4,9 +4,10 @@ use std::sync::Arc;
 
 use pithos_pandoras::domain::ErrorCode;
 use pithos_pandoras::service::{
-    FileAddRequest, FileGetRequest, ReportAddRequest, ReportPutRequest, Service,
-    StageFinishRequest, StageStartRequest, TaskBlockRequest, TaskCloseRequest, TaskCreateRequest,
-    TaskNoteRequest, TaskResumeRequest, TaskSetStatusRequest,
+    FileAddRequest, FileGetRequest, ReportAddRequest, ReportOpenRequest, ReportPublishRequest,
+    ReportPutRequest, ReportSectionRequest, Service, StageFinishRequest, StageStartRequest,
+    TaskBlockRequest, TaskCloseRequest, TaskCreateRequest, TaskNoteRequest, TaskResumeRequest,
+    TaskSetStatusRequest,
 };
 use pithos_pandoras::store::{self, Store};
 use tempfile::TempDir;
@@ -54,6 +55,57 @@ async fn create_task(service: &Service, title: &str) -> pithos_pandoras::domain:
         .unwrap()
 }
 
+async fn finish_stage(
+    service: &Service,
+    task: &str,
+    role: &str,
+    kind: &str,
+    text: &str,
+    verdict: &str,
+) -> pithos_pandoras::domain::StageFinish {
+    let draft = service
+        .report_open(ReportOpenRequest {
+            project: Some(String::from("PithosPandoras")),
+            task: Some(task.to_string()),
+            role: Some(role.to_string()),
+            kind: Some(kind.to_string()),
+            title: None,
+        })
+        .await
+        .unwrap();
+    service
+        .report_section(ReportSectionRequest {
+            draft_id: Some(draft.draft_id.clone()),
+            role: Some(role.to_string()),
+            key: Some(String::from("summary")),
+            title: None,
+            body: Some(text.to_string()),
+            order: None,
+            expected_revision: None,
+        })
+        .await
+        .unwrap();
+    let published = service
+        .report_publish(ReportPublishRequest {
+            draft_id: Some(draft.draft_id),
+            role: Some(role.to_string()),
+            expected_revision: None,
+        })
+        .await
+        .unwrap();
+    service
+        .stage_finish(StageFinishRequest {
+            project: Some(String::from("PithosPandoras")),
+            task: Some(task.to_string()),
+            role: Some(role.to_string()),
+            verdict: Some(verdict.to_string()),
+            report_id: Some(published.report_id),
+            kind: None,
+        })
+        .await
+        .unwrap()
+}
+
 fn start_req(task: &str, role: &str) -> StageStartRequest {
     StageStartRequest {
         project: Some(String::from("PithosPandoras")),
@@ -79,23 +131,23 @@ async fn core_cycle_creates_numbers_and_closes_task() {
     assert_eq!(started.stage.round, 1);
     assert!(started.inputs.is_empty());
 
-    let conflict = service
+    let resumed = service
         .stage_start(start_req("1", "Исполнитель"))
         .await
-        .unwrap_err();
-    assert_eq!(conflict.code, ErrorCode::Conflict);
-
-    let finished = service
-        .stage_finish(StageFinishRequest {
-            project: Some(String::from("PithosPandoras")),
-            task: Some(String::from("1")),
-            role: Some(String::from("Исполнитель")),
-            verdict: Some(String::from("готово")),
-            report: Some(String::from("сделано")),
-            kind: None,
-        })
-        .await
         .unwrap();
+    assert!(resumed.resumed);
+    assert_eq!(resumed.stage.id, started.stage.id);
+    assert_eq!(resumed.stage.round, 1);
+
+    let finished = finish_stage(
+        &service,
+        "1",
+        "Исполнитель",
+        "report",
+        "Сделано и проверено, замечаний нет.",
+        "готово",
+    )
+    .await;
     assert!(finished.stage.finished_at.is_some());
     assert_eq!(finished.report.kind, "report");
 
@@ -121,7 +173,8 @@ async fn core_cycle_creates_numbers_and_closes_task() {
         .unwrap();
     assert!(card.current_stage.is_none());
     assert_eq!(card.reports.len(), 2);
-    assert!(card.warnings.contains(&String::from("folder_missing")));
+    assert!(!card.warnings.contains(&String::from("folder_missing")));
+    assert!(std::path::Path::new(&card.folder_path).exists());
 
     let closed = service
         .task_close(TaskCloseRequest {
@@ -280,17 +333,15 @@ async fn role_inputs_take_latest_finished_report() {
         .stage_start(start_req(&task_ref, "Исполнитель"))
         .await
         .unwrap();
-    service
-        .stage_finish(StageFinishRequest {
-            project: Some(String::from("PithosPandoras")),
-            task: Some(task_ref.clone()),
-            role: Some(String::from("Исполнитель")),
-            verdict: Some(String::from("ok")),
-            report: Some(String::from("отчёт исполнителя")),
-            kind: None,
-        })
-        .await
-        .unwrap();
+    finish_stage(
+        &service,
+        &task_ref,
+        "Исполнитель",
+        "report",
+        "Отчёт исполнителя по задаче готов.",
+        "ok",
+    )
+    .await;
 
     let started = service
         .stage_start(start_req(&task_ref, "Проверяющий"))
@@ -350,17 +401,15 @@ async fn return_input_takes_report_that_sent_task_back() {
         .stage_start(start_req(&task_ref, "Проверяющий"))
         .await
         .unwrap();
-    service
-        .stage_finish(StageFinishRequest {
-            project: Some(String::from("PithosPandoras")),
-            task: Some(task_ref.clone()),
-            role: Some(String::from("Проверяющий")),
-            verdict: Some(String::from("return")),
-            report: Some(String::from("верни на доработку")),
-            kind: None,
-        })
-        .await
-        .unwrap();
+    finish_stage(
+        &service,
+        &task_ref,
+        "Проверяющий",
+        "report",
+        "Верни на доработку: не проверены края.",
+        "return",
+    )
+    .await;
 
     let started = service
         .stage_start(start_req(&task_ref, "Исполнитель"))
@@ -387,7 +436,7 @@ async fn parallel_task_create_gets_unique_numbers() {
 }
 
 #[tokio::test]
-async fn parallel_stage_start_returns_conflict() {
+async fn parallel_stage_start_returns_same_stage() {
     let (service, _dir) = setup("{}").await;
     let task = create_task(&service, "Гонка").await;
     let task_ref = task.task.number.to_string();
@@ -397,10 +446,10 @@ async fn parallel_stage_start_returns_conflict() {
         service.stage_start(start_req(&task_ref, "Исполнитель"))
     );
 
-    let successes = u8::from(first.is_ok()) + u8::from(second.is_ok());
-    assert_eq!(successes, 1);
-    let error = first.err().or_else(|| second.err()).unwrap();
-    assert_eq!(error.code, ErrorCode::Conflict);
+    let first = first.unwrap();
+    let second = second.unwrap();
+    assert_eq!(first.stage.id, second.stage.id);
+    assert_eq!(u8::from(first.resumed) + u8::from(second.resumed), 1);
 }
 
 #[tokio::test]
@@ -427,6 +476,7 @@ async fn block_finishes_stage_and_resume_clears_waiting() {
         .unwrap();
     assert_eq!(blocked.status_id, "waiting");
     assert_eq!(blocked.waiting_for, "человек");
+    assert_eq!(blocked.stage_closed, Some(true));
 
     let card = service
         .task_get(Some(String::from("PithosPandoras")), Some(task_ref.clone()))
@@ -465,17 +515,15 @@ async fn stage_start_moves_new_task_to_active_and_records_role() {
         .unwrap();
     assert_eq!(card.task.status_id, "active");
 
-    service
-        .stage_finish(StageFinishRequest {
-            project: Some(String::from("PithosPandoras")),
-            task: Some(task_ref.clone()),
-            role: Some(String::from("Исполнитель")),
-            verdict: Some(String::from("готово")),
-            report: Some(String::from("сделано")),
-            kind: None,
-        })
-        .await
-        .unwrap();
+    finish_stage(
+        &service,
+        &task_ref,
+        "Исполнитель",
+        "report",
+        "Сделано и проверено, замечаний нет.",
+        "готово",
+    )
+    .await;
 
     let timeline = service
         .task_timeline(Some(String::from("PithosPandoras")), Some(task_ref))
@@ -541,6 +589,7 @@ async fn file_add_stays_inside_project_root() {
             task: Some(task_ref.clone()),
             role: Some(String::from("Исполнитель")),
             path: Some(inside.to_string_lossy().to_string()),
+            file_name: None,
             title: Some(String::from("Заметка")),
             comment: None,
             kind: None,
@@ -567,6 +616,7 @@ async fn file_add_stays_inside_project_root() {
             task: Some(task_ref),
             role: Some(String::from("Исполнитель")),
             path: Some(outside.to_string_lossy().to_string()),
+            file_name: None,
             title: Some(String::from("Снаружи")),
             comment: None,
             kind: None,
@@ -614,6 +664,7 @@ async fn block_without_waiting_does_not_set_waiting_since() {
         .unwrap();
     assert_eq!(blocked.status_id, "blocked");
     assert!(blocked.waiting_since.is_none());
+    assert_eq!(blocked.stage_closed, Some(false));
 }
 
 #[tokio::test]

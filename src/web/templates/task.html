@@ -32,7 +32,7 @@
   <h2>Постановка</h2>
   <div class="markdown statement">{{ task.statement_html|safe }}</div>
   <dl class="meta">
-    <dt>Папка</dt><dd>{{ task.folder_name }}</dd>
+    <dt>Папка</dt><dd>{{ task.folder_path }}</dd>
     <dt>Создана</dt><dd>{{ task.created_at }}</dd>
     <dt>Обновлена</dt><dd>{{ task.updated_at }}</dd>
   </dl>
@@ -43,10 +43,29 @@
     <section class="card">
       <h2>Текущий этап</h2>
       <p><strong{% if !stage.role_color.is_empty() %} style="color: {{ stage.role_color }}"{% endif %}>{{ stage.role }}</strong>, круг {{ stage.round }}</p>
-      <p class="muted">Начат {{ stage.started_at }}</p>
+      <p class="muted">Начат {{ stage.started_at }}{% if !stage.last_activity_at.is_empty() %} · активность {{ stage.last_activity_at }}{% endif %}</p>
+      {% if !stage.note.is_empty() %}
+        <p class="stage-note">{{ stage.note }}</p>
+      {% endif %}
     </section>
   {% when None %}
 {% endmatch %}
+
+{% if !drafts.is_empty() %}
+  <section class="card">
+    <h2>Черновики</h2>
+    {% for draft in drafts %}
+      <article class="report draft">
+        <header>
+          <span class="kind">черновик · {{ draft.label }}</span>
+          <h3>{{ draft.title }}</h3>
+          <span class="muted"><span{% if !draft.role_color.is_empty() %} style="color: {{ draft.role_color }}"{% endif %}>{{ draft.role }}</span> · {{ draft.updated_at }}</span>
+        </header>
+        <div class="markdown">{{ draft.html|safe }}</div>
+      </article>
+    {% endfor %}
+  </section>
+{% endif %}
 
 <section class="card">
   <h2>Отчёты</h2>

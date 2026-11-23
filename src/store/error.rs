@@ -20,6 +20,14 @@ pub enum StoreError {
         kind: String,
         round: String,
     },
+    #[error("{0}")]
+    App(Box<AppError>),
+}
+
+impl From<AppError> for StoreError {
+    fn from(err: AppError) -> Self {
+        Self::App(Box::new(err))
+    }
 }
 
 impl From<StoreError> for AppError {
@@ -39,6 +47,7 @@ impl From<StoreError> for AppError {
             StoreError::InputMissing { role, kind, round } => {
                 AppError::input_missing(&role, &kind, &round)
             }
+            StoreError::App(err) => *err,
         }
     }
 }

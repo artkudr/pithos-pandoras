@@ -677,6 +677,13 @@ h3 {
 
 .meta dd {
   margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.stage-note {
+  margin: 8px 0 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .report {

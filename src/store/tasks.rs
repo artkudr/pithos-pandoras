@@ -29,6 +29,7 @@ fn map_task(row: &rusqlite::Row<'_>) -> rusqlite::Result<Task> {
         updated_at: row.get(14)?,
         closed_at: row.get(15)?,
         origin: row.get(16)?,
+        stage_closed: None,
     })
 }
 

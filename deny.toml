@@ -6,6 +6,7 @@ version = 2
 yanked = "deny"
 ignore = [
     { id = "RUSTSEC-2026-0374", reason = "basic-toml тянет askama_derive; безопасного обновления пока нет" },
+    { id = "RUSTSEC-2026-0543", reason = "chrono тянет rmcp и schemars; прямой зависимости нет, безопасного обновления нет" },
 ]
 
 [licenses]
