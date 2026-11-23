@@ -1,8 +1,7 @@
-# graphify: только код проекта, без сборки и справочного архива.
+# graphify: только код проекта, без сборки и кэша.
 target/
 graphify-out/
 .git/
-home-dev-kit/
 node_modules/
 *.db
 *.db-wal

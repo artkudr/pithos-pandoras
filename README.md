@@ -95,6 +95,3 @@ graph_stats
 
 В терминале без OpenCode — `graphify query "…"`, `graphify explain "…"`,
 `graphify affected "…"`.
-
-`home-dev-kit/` — справочный архив с рабочего компьютера. Не часть проекта,
-в индекс не попадает.

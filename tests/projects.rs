@@ -112,16 +112,16 @@ async fn task_error_names_project() {
     let dir = TempDir::new().unwrap();
     let store = Store::open(dir.path().join("test.db")).unwrap();
     let root = dir.path().to_string_lossy().to_string();
-    init(&store, "devtools", &root, "Задачи", "{number} - {date}")
+    init(&store, "pithos", &root, "Задачи", "{number} - {date}")
         .await
         .unwrap();
     let service = service(&store);
 
     let err = service
-        .task_get(Some(String::from("devtools")), Some(String::from("99")))
+        .task_get(Some(String::from("pithos")), Some(String::from("99")))
         .await
         .unwrap_err();
-    assert!(err.message.contains("devtools"), "message: {}", err.message);
+    assert!(err.message.contains("pithos"), "message: {}", err.message);
     assert!(err.message.contains("99"), "message: {}", err.message);
 }
 
